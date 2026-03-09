@@ -1,0 +1,15 @@
+bin/
+obj/
+*.dll
+*.exe
+
+.env
+appsettings.Development.json
+appsettings.Production.json
+
+*.db
+*.db-shm
+*.db-wal
+
+.DS_Store
+Thumbs.db

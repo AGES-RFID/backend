@@ -1,0 +1,52 @@
+@backend_HostAddress = http://localhost:5107
+
+### Get all users
+GET {{backend_HostAddress}}/api/users
+Accept: application/json
+
+###
+
+### Get user by ID
+GET {{backend_HostAddress}}/api/users/1
+Accept: application/json
+
+###
+
+### Create a new user
+POST {{backend_HostAddress}}/api/users
+Content-Type: application/json
+
+{
+  "name": "John Doe",
+  "email": "john@example.com"
+}
+
+###
+
+### Create another user
+POST {{backend_HostAddress}}/api/users
+Content-Type: application/json
+
+{
+  "name": "Jane Smith",
+  "email": "jane@example.com"
+}
+
+###
+
+### Update a user
+PUT {{backend_HostAddress}}/api/users/1
+Content-Type: application/json
+
+{
+  "name": "John Updated",
+  "email": "john.updated@example.com"
+}
+
+###
+
+### Delete a user
+DELETE {{backend_HostAddress}}/api/users/1
+Accept: application/json
+
+###
