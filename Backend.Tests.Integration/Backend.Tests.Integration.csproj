@@ -23,7 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../src/backend.csproj" />
+    <ProjectReference Include="../Backend.API/Backend.API.csproj" />
   </ItemGroup>
 
 </Project>
