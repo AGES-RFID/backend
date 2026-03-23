@@ -6,9 +6,18 @@ namespace Backend.Features.Users.Models;
 
 public class UserConfiguration : IEntityTypeConfiguration<User>
 {
-
     public void Configure(EntityTypeBuilder<User> builder)
     {
-        builder.Property(u => u.CreatedAt).IsRequired(false).HasDefaultValueSql("CURRENT_TIMESTAMP");
+        builder.HasKey(u => u.UserId);
+
+        builder.Property(u => u.CreatedAt)
+            .IsRequired()
+            .HasDefaultValueSql("now()")
+            .ValueGeneratedOnAdd();
+
+        builder.Property(u => u.UpdatedAt)
+            .IsRequired()
+            .HasDefaultValueSql("now()")
+            .ValueGeneratedOnAdd();
     }
 }

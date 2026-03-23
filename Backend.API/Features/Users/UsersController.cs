@@ -15,12 +15,12 @@ public class UsersController(IUserService userService) : ControllerBase
         return Ok(users);
     }
 
-    [HttpGet("{id}")]
-    public async Task<ActionResult<UserDto>> GetUser(int id)
+    [HttpGet("{userId}")]
+    public async Task<ActionResult<UserDto>> GetUser(Guid userId)
     {
         try
         {
-            var user = await _userService.GetUserAsync(id);
+            var user = await _userService.GetUserAsync(userId);
             return Ok(user);
         }
         catch (KeyNotFoundException)
@@ -33,15 +33,15 @@ public class UsersController(IUserService userService) : ControllerBase
     public async Task<ActionResult<UserDto>> CreateUser(CreateUserDto dto)
     {
         var user = await _userService.CreateUserAsync(dto);
-        return CreatedAtAction(nameof(GetUser), new { id = user.Id }, user);
+        return CreatedAtAction(nameof(GetUser), new { userId = user.UserId }, user);
     }
 
-    [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateUser(int id, CreateUserDto dto)
+    [HttpPut("{userId}")]
+    public async Task<IActionResult> UpdateUser(Guid userId, CreateUserDto dto)
     {
         try
         {
-            await _userService.UpdateUserAsync(id, dto);
+            await _userService.UpdateUserAsync(userId, dto);
             return NoContent();
         }
         catch (KeyNotFoundException)

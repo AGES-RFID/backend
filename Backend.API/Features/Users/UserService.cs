@@ -4,27 +4,29 @@ namespace Backend.Features.Users;
 
 public interface IUserService
 {
-    Task<UserDto> GetUserAsync(int id);
+    Task<UserDto> GetUserAsync(Guid id);
     Task<IEnumerable<UserDto>> GetAllUsersAsync();
     Task<UserDto> CreateUserAsync(CreateUserDto dto);
-    Task<UserDto> UpdateUserAsync(int id, CreateUserDto dto);
+    Task<UserDto> UpdateUserAsync(Guid id, CreateUserDto dto);
 }
 
 public class UserService(AppDbContext db) : IUserService
 {
     private readonly AppDbContext _db = db;
 
-    public async Task<UserDto> GetUserAsync(int id)
+    public async Task<UserDto> GetUserAsync(Guid id)
     {
         var user = await _db.Users.FirstOrDefaultAsync(u => u.UserId == id)
             ?? throw new KeyNotFoundException($"User with id {id} not found");
 
-        return MapToDto(user);
+        return UserDto.FromModel(user);
     }
 
-    public Task<IEnumerable<UserDto>> GetAllUsersAsync()
+    public async Task<IEnumerable<UserDto>> GetAllUsersAsync()
     {
-        return Task.FromResult(_db.Users.Select(MapToDto).AsEnumerable());
+        var users = await _db.Users.AsNoTracking().Select(u => UserDto.FromModel(u)).ToListAsync();
+
+        return users;
     }
 
     public async Task<UserDto> CreateUserAsync(CreateUserDto dto)
@@ -33,10 +35,10 @@ public class UserService(AppDbContext db) : IUserService
 
         await _db.SaveChangesAsync();
 
-        return MapToDto(user.Entity);
+        return UserDto.FromModel(user.Entity);
     }
 
-    public async Task<UserDto> UpdateUserAsync(int id, CreateUserDto dto)
+    public async Task<UserDto> UpdateUserAsync(Guid id, CreateUserDto dto)
     {
         var user = await _db.Users.FirstOrDefaultAsync(u => u.UserId == id)
             ?? throw new KeyNotFoundException($"User with id {id} not found");
@@ -47,15 +49,7 @@ public class UserService(AppDbContext db) : IUserService
 
         await _db.SaveChangesAsync();
 
-        return MapToDto(user);
+        return UserDto.FromModel(user);
     }
 
-    private static UserDto MapToDto(User user) => new()
-    {
-        Id = user.UserId,
-        Name = user.Name,
-        Email = user.Email,
-        CreatedAt = user.CreatedAt,
-        UpdatedAt = user.UpdatedAt,
-    };
 }
