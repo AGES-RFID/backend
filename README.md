@@ -22,7 +22,7 @@ Clone o repositório e navegue até o diretório backend:
 
 Copie a configuração do ambiente para `src`:
    ```bash
-   cp .env.example src/.env
+   cp .env.example Backend.API/.env
    ```
   
 Execute o banco de dados PostgreSQL usando Docker:
@@ -32,7 +32,7 @@ Execute o banco de dados PostgreSQL usando Docker:
 
 Inicie o servidor de desenvolvimento:
    ```bash
-   dotnet run --project src
+   dotnet run --project Backend.API
    ```
 
 A API estará disponível em `http://localhost:5000` com documentação Swagger em `http://localhost:5000/swagger`.
