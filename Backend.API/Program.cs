@@ -1,10 +1,7 @@
 using Microsoft.EntityFrameworkCore;
-using DotNetEnv;
 
 using Backend.Features.Users;
 using Backend.Database;
-
-Env.Load();
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,7 +10,15 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.AddSwaggerGen();
 
-var connectionString = Environment.GetEnvironmentVariable("DATABASE_CONNECTION_STRING");
+var connectionString = builder.Configuration.GetConnectionString("Default");
+
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    throw new InvalidOperationException(
+        "Missing connection string 'Default'. Configure ConnectionStrings:Default or set the ConnectionStrings__Default environment variable"
+    );
+}
+
 builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString).UseSnakeCaseNamingConvention());
 
 // Register feature services

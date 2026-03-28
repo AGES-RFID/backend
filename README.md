@@ -20,11 +20,6 @@ Clone o repositório e navegue até o diretório backend:
    cd backend
    ```
 
-Copie a configuração do ambiente para `src`:
-   ```bash
-   cp .env.example Backend.API/.env
-   ```
-  
 Execute o banco de dados PostgreSQL usando Docker:
    ```bash
    docker compose up # dica: use `-d` para rodar em segundo plano
