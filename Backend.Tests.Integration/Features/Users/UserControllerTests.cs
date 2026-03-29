@@ -58,12 +58,12 @@ public class UserControllerTests(CustomWebApplicationFactory factory) : IClassFi
         createResponse.EnsureSuccessStatusCode();
         var createdUser = await createResponse.Content.ReadFromJsonAsync<UserDto>();
 
-        var getResponse = await _client.GetAsync($"/api/users/{createdUser?.Id}");
+        var getResponse = await _client.GetAsync($"/api/users/{createdUser?.UserId}");
         getResponse.EnsureSuccessStatusCode();
         var fetchedUser = await getResponse.Content.ReadFromJsonAsync<UserDto>();
 
         Assert.NotNull(fetchedUser);
-        Assert.Equal(createdUser?.Id, fetchedUser.Id);
+        Assert.Equal(createdUser?.UserId, fetchedUser.UserId);
         Assert.Equal(createdUser?.Name, fetchedUser.Name);
         Assert.Equal(createdUser?.Email, fetchedUser.Email);
     }
