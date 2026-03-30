@@ -1,4 +1,5 @@
 using Backend.Features.Common.Mapping;
+using Backend.Features.Common.Services;
 
 namespace Backend.Features.Cars;
 
@@ -12,17 +13,17 @@ public interface ICarService
     Task<CarDto> UpdateCarExitAsync(int id);
 }
 
-public class CarService : ICarService
+public class CarService : BaseService, ICarService
 {
     private readonly List<Backend.Features.Cars.Models.Car> _cars = new();
 
     public async Task<CarDto> CreateCarAsync(CreateCarDto dto)
     {
-        if (_cars.Any(c => c.PlateNumber == dto.PlateNumber))
-            throw new InvalidOperationException($"Carro com placa {dto.PlateNumber} já existe");
+        var existingCar = _cars.FirstOrDefault(c => c.PlateNumber == dto.PlateNumber);
+        ValidateExists(existingCar, "Carro com placa", dto.PlateNumber);
 
         var car = dto.ToEntity();
-        car.CarId = _cars.Count + 1;
+        car.CarId = GenerateId(_cars);
 
         _cars.Add(car);
 
@@ -32,8 +33,7 @@ public class CarService : ICarService
     public async Task<CarDto> GetCarAsync(int id)
     {
         var car = _cars.FirstOrDefault(c => c.CarId == id);
-        if (car == null)
-            throw new KeyNotFoundException($"Carro com ID {id} não encontrado");
+        ValidateNotNull(car, "Carro", id);
 
         return car.ToDto();
     }
@@ -46,8 +46,7 @@ public class CarService : ICarService
     public async Task DeleteCarAsync(int id)
     {
         var car = _cars.FirstOrDefault(c => c.CarId == id);
-        if (car == null)
-            throw new KeyNotFoundException($"Carro com ID {id} não encontrado");
+        ValidateNotNull(car, "Carro", id);
 
         _cars.Remove(car);
     }
@@ -55,8 +54,7 @@ public class CarService : ICarService
     public async Task<CarDto> UpdateCarEntryAsync(int id)
     {
         var car = _cars.FirstOrDefault(c => c.CarId == id);
-        if (car == null)
-            throw new KeyNotFoundException($"Carro com ID {id} não encontrado");
+        ValidateNotNull(car, "Carro", id);
 
         car.RecordEntry();
 
@@ -66,11 +64,9 @@ public class CarService : ICarService
     public async Task<CarDto> UpdateCarExitAsync(int id)
     {
         var car = _cars.FirstOrDefault(c => c.CarId == id);
-        if (car == null)
-            throw new KeyNotFoundException($"Carro com ID {id} não encontrado");
+        ValidateNotNull(car, "Carro", id);
 
-        if (!car.LastEntry.HasValue)
-            throw new InvalidOperationException($"Carro com ID {id} não possui registro de entrada");
+        ValidateHasEntry(car.LastEntry, "Carro", id);
 
         car.RecordExit();
 

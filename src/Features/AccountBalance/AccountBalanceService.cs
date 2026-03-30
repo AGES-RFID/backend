@@ -1,5 +1,6 @@
 using Backend.Features.Common.Mapping;
 using Backend.Features.AccountBalance.Enums;
+using Backend.Features.Common.Services;
 
 public interface IAccountBalanceService
 {
@@ -9,7 +10,7 @@ public interface IAccountBalanceService
     Task<TransactionDto> WithdrawAsync(int customerId, WithdrawDto dto);
 }
 
-public class AccountBalanceService : IAccountBalanceService
+public class AccountBalanceService : BaseService, IAccountBalanceService
 {
     private readonly List<Backend.Features.AccountBalance.Models.AccountBalance> _accountBalances = new();
     private readonly List<Backend.Features.AccountBalance.Models.Transaction> _transactions = new();
@@ -46,13 +47,13 @@ public class AccountBalanceService : IAccountBalanceService
             accountBalance = new Backend.Features.AccountBalance.Models.AccountBalance
             {
                 CustomerId = customerId,
-                AccountBalanceId = _accountBalances.Count + 1
+                AccountBalanceId = GenerateId(_accountBalances)
             };
             _accountBalances.Add(accountBalance);
         }
 
         var transaction = dto.ToEntity(customerId);
-        transaction.TransactionId = _transactions.Count + 1;
+        transaction.TransactionId = GenerateId(_transactions);
 
         _transactions.Add(transaction);
 
@@ -65,14 +66,12 @@ public class AccountBalanceService : IAccountBalanceService
     public async Task<TransactionDto> WithdrawAsync(int customerId, WithdrawDto dto)
     {
         var accountBalance = _accountBalances.FirstOrDefault(ab => ab.CustomerId == customerId);
-        if (accountBalance == null)
-            throw new InvalidOperationException($"Saldo da conta não encontrado para o cliente {customerId}");
+        ValidateNotNull(accountBalance, "Saldo da conta", customerId);
 
-        if (accountBalance.Balance < dto.Amount)
-            throw new InvalidOperationException("Fundos insuficientes");
+        ValidateSufficientFunds(accountBalance.Balance, dto.Amount);
 
         var transaction = dto.ToEntity(customerId);
-        transaction.TransactionId = _transactions.Count + 1;
+        transaction.TransactionId = GenerateId(_transactions);
 
         _transactions.Add(transaction);
 

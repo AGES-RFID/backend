@@ -1,4 +1,5 @@
 using Backend.Features.Common.Mapping;
+using Backend.Features.Common.Services;
 
 namespace Backend.Features.Admins;
 
@@ -10,14 +11,14 @@ public interface IAdminService
     Task<IEnumerable<AdminDto>> GetAllAdminsAsync();
 }
 
-public class AdminService : IAdminService
+public class AdminService : BaseService, IAdminService
 {
     private readonly List<Backend.Features.Admins.Models.Admin> _admins = new();
 
     public async Task<AdminDto> CreateAdminAsync(CreateAdminDto dto)
     {
         var admin = dto.ToEntity();
-        admin.UserId = _admins.Count + 1;
+        admin.UserId = GenerateId(_admins);
 
         _admins.Add(admin);
 
@@ -27,8 +28,7 @@ public class AdminService : IAdminService
     public async Task<AdminDto> GetAdminAsync(int id)
     {
         var admin = _admins.FirstOrDefault(a => a.UserId == id);
-        if (admin == null)
-            throw new KeyNotFoundException($"Administrador com ID {id} não encontrado");
+        ValidateNotNull(admin, "Administrador", id);
 
         return admin.ToDto();
     }
@@ -36,8 +36,7 @@ public class AdminService : IAdminService
     public async Task<AdminDto> UpdateAdminAsync(int id, CreateAdminDto dto)
     {
         var admin = _admins.FirstOrDefault(a => a.UserId == id);
-        if (admin == null)
-            throw new KeyNotFoundException($"Administrador com ID {id} não encontrado");
+        ValidateNotNull(admin, "Administrador", id);
 
         admin.UpdateEntity(dto);
 

@@ -1,4 +1,5 @@
 using Backend.Features.Common.Mapping;
+using Backend.Features.Common.Services;
 
 namespace Backend.Features.RfidTags;
 
@@ -11,17 +12,17 @@ public interface IRfidTagService
     Task<IEnumerable<RfidTagDto>> GetAllTagsAsync();
 }
 
-public class RfidTagService : IRfidTagService
+public class RfidTagService : BaseService, IRfidTagService
 {
     private readonly List<Backend.Features.RfidTags.Models.RfidTag> _tags = new();
 
     public async Task<RfidTagDto> CreateTagAsync(CreateRfidTagDto dto)
     {
-        if (_tags.Any(t => t.TagNumber == dto.TagNumber))
-            throw new InvalidOperationException($"Número da tag {dto.TagNumber} já existe");
+        var existingTag = _tags.FirstOrDefault(t => t.TagNumber == dto.TagNumber);
+        ValidateExists(existingTag, "Número da tag", dto.TagNumber);
 
         var tag = dto.ToEntity();
-        tag.RfidTagId = _tags.Count + 1;
+        tag.RfidTagId = GenerateId(_tags);
 
         _tags.Add(tag);
 
@@ -31,11 +32,9 @@ public class RfidTagService : IRfidTagService
     public async Task<RfidTagDto> DeactivateTagAsync(int id)
     {
         var tag = _tags.FirstOrDefault(t => t.RfidTagId == id);
-        if (tag == null)
-            throw new KeyNotFoundException($"Tag RFID com ID {id} não encontrada");
+        ValidateNotNull(tag, "Tag RFID", id);
 
-        if (!tag.IsActive)
-            throw new InvalidOperationException($"Tag RFID com ID {id} já está desativada");
+        ValidateActive(tag.IsActive, "Tag RFID", id);
 
         tag.IsActive = false;
         tag.DeactivatedAt = DateTime.UtcNow;
@@ -47,11 +46,9 @@ public class RfidTagService : IRfidTagService
     public async Task<RfidTagDto> ReactivateTagAsync(int id)
     {
         var tag = _tags.FirstOrDefault(t => t.RfidTagId == id);
-        if (tag == null)
-            throw new KeyNotFoundException($"Tag RFID com ID {id} não encontrada");
+        ValidateNotNull(tag, "Tag RFID", id);
 
-        if (tag.IsActive)
-            throw new InvalidOperationException($"Tag RFID com ID {id} já está ativa");
+        ValidateInactive(tag.IsActive, "Tag RFID", id);
 
         tag.IsActive = true;
         tag.ReactivatedAt = DateTime.UtcNow;

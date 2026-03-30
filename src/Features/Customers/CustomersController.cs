@@ -1,10 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
+using Backend.Features.Common.Controllers;
 
 namespace Backend.Features.Customers;
 
-[ApiController]
 [Route("api/customers")]
-public class CustomersController(ICustomerService customerService) : ControllerBase
+public class CustomersController(ICustomerService customerService) : BaseController
 {
     private readonly ICustomerService _customerService = customerService;
 
@@ -18,35 +18,22 @@ public class CustomersController(ICustomerService customerService) : ControllerB
     [HttpGet("{id}")]
     public async Task<ActionResult<CustomerDto>> GetCustomer(int id)
     {
-        try
-        {
-            var customer = await _customerService.GetCustomerAsync(id);
-            return Ok(customer);
-        }
-        catch (KeyNotFoundException)
-        {
-            return NotFound();
-        }
+        return await ExecuteAsync(async () => await _customerService.GetCustomerAsync(id));
     }
 
     [HttpGet]
     public async Task<ActionResult<IEnumerable<CustomerDto>>> GetAllCustomers()
     {
-        var customers = await _customerService.GetAllCustomersAsync();
-        return Ok(customers);
+        return await ExecuteAsync(async () => await _customerService.GetAllCustomersAsync());
     }
 
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateCustomer(int id, CreateCustomerDto dto)
     {
-        try
+        return await ExecuteAsync(async () => 
         {
             await _customerService.UpdateCustomerAsync(id, dto);
-            return NoContent();
-        }
-        catch (KeyNotFoundException)
-        {
-            return NotFound();
-        }
+            return NoContentResponse();
+        });
     }
 }
