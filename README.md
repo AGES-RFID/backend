@@ -45,6 +45,23 @@ Suba API + PostgreSQL usando o profile `full`:
 docker compose --profile full up -d --build
 ```
 
+### Migrações e Seed
+As migrações do banco de dados ficam armazenadas em `Backend.API/Database/Migrations`, e são aplicadas automáticamente na inicialização da aplicação.
+
+Para criar uma nova migração, altere os modelos e execute o comando:
+
+> NOTA: É necessário instalar a CLI do Entity Framework Core globalmente para rodar o comando abaixo:
+>
+> Caso já tenha a CLI instalada, não é necessário rodar o comando novamente.
+> ```bash
+> dotnet tool install --global dotnet-ef
+> ```
+
+```bash
+dotnet ef migrations add NomeDaMigracao --project Backend.API/ --output-dir Database/Migrations
+```
+
+
 ## Testes
 
 Os testes do backend são organizados em dois projetos: `Backend.Tests.Unit` e `Backend.Tests.Integration`. Ambos os projetos utilizam `xUnit` como framework de teste.
