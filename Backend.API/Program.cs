@@ -5,6 +5,8 @@ using Backend.Database;
 
 var builder = WebApplication.CreateBuilder(args);
 
+const string DevCorsPolicyName = "DevCors";
+
 // Add services to the container
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
@@ -17,6 +19,20 @@ if (string.IsNullOrWhiteSpace(connectionString))
     throw new InvalidOperationException(
         "Missing connection string 'Default'. Configure ConnectionStrings:Default or set the ConnectionStrings__Default environment variable"
     );
+}
+
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddCors(options =>
+    {
+        options.AddPolicy(DevCorsPolicyName, policy =>
+        {
+            policy
+                .WithOrigins("*") // in dev mode we allow everything
+                .AllowAnyHeader()
+                .AllowAnyMethod();
+        });
+    });
 }
 
 builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString).UseSnakeCaseNamingConvention());
@@ -39,6 +55,8 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
     app.UseSwagger();
     app.UseSwaggerUI();
+
+    app.UseCors(DevCorsPolicyName);
 }
 
 app.UseHttpsRedirection();
