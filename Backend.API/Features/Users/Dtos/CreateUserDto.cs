@@ -1,7 +1,13 @@
 namespace Backend.Features.Users;
 
+using System.ComponentModel.DataAnnotations;
+
 public class CreateUserDto
 {
-    public string Name { get; set; } = string.Empty;
-    public string Email { get; set; } = string.Empty;
+    [Required]
+    [MinLength(1)]
+    public required string Name { get; set; }
+    [Required]
+    [EmailAddress]
+    public required string Email { get; set; }
 }
