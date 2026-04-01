@@ -3,8 +3,8 @@ namespace Backend.Features.Users;
 public class UserDto
 {
     public Guid UserId { get; set; }
-    public string Name { get; set; } = string.Empty;
-    public string Email { get; set; } = string.Empty;
+    public required string Name { get; set; }
+    public required string Email { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 
