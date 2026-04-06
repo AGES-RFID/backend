@@ -1,14 +1,148 @@
+# Build outputs
 bin/
 obj/
+out/
+build/
+dist/
+publish/
 *.dll
 *.exe
+*.exe.config
+*.pdb
+*.pri
+*.deps.json
+*.runtimeconfig.json
 
+# NuGet packages
+packages/
+*.nupkg
+*.snupkg
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# Visual Studio
+.vs/
+*.vcxproj.filters
+*.vcxproj.user
+
+# Rider
+.idea/
+*.sln.iml
+
+# Environment files
 .env
+.env.*
+appsettings.Development.json
 appsettings.Production.json
+appsettings.Local.json
 
+# Database files
 *.db
 *.db-shm
 *.db-wal
+*.sqlite
+*.sqlite3
 
+# Logs
+logs/
+*.log
+*.txt
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# OS generated files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
+Desktop.ini
+
+# Test results
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+
+# Security files
+*.pfx
+*.p12
+*.key
+*.pem
+*.crt
+*.cer
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Generated documentation
+docs/_site/
+docs/.vuepress/dist/
+
+# Local configuration
+local.settings.json
+host.json
+
+# Azure
+.azure/
+
+# AWS
+.aws/
+
+# Google Cloud
+.gcloud/
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# Kubernetes
+*.kubeconfig
+
+# Editor backups
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# Package manager lock files (keep package.json, but ignore lock files if desired)
+package-lock.json
+yarn.lock
