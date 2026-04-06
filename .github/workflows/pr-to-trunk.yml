@@ -1,0 +1,100 @@
+name: Backend Integration
+
+on:
+  pull_request:
+    branches: [ "main" ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  validate:
+    name: Backend CI
+    runs-on: ubuntu-latest
+
+    steps:
+      # ==========================================
+      # ENTRY GATE
+      # ==========================================
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate Branch Name
+        id: validate-branch
+        run: |
+          if [[ ! "${{ github.head_ref }}" =~ ^(feat|fix|chore|docs|refactor)\/[0-9]+-[a-z0-9-]+$ ]]; then
+            echo "[ERROR] Nomenclatura da branch fora do padrão: ${{ github.head_ref }}"
+            echo "[INFO] Formato esperado: <tipo>/<id>-<descricao-em-kebab-case>"
+            exit 1
+          fi
+
+      - name: Validate PR Title
+        id: validate-pr-title
+        uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ==========================================
+      # SETUP GATE
+      # ==========================================
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+        
+      - name: Restore Dependencies
+        id: install-deps
+        run: dotnet restore Backend.sln
+
+      # ==========================================
+      # SECURITY GATE
+      # ==========================================
+      - name: Security Audit
+        id: security-audit
+        run: dotnet list Backend.sln package --vulnerable
+
+      # ==========================================
+      # QUALITY GATE
+      # ==========================================
+      - name: Lint & Format
+        id: lint-format
+        run: dotnet format Backend.sln --verify-no-changes
+
+      - name: Unit Tests
+        id: unit-tests
+        run: dotnet test Backend.sln --no-restore --verbosity normal
+
+      # ==========================================
+      # BUILD GATE
+      # ==========================================
+      - name: Build Application
+        id: build
+        run: dotnet build Backend.sln --configuration Release --no-restore
+
+      # ==========================================
+      # EXIT GATE
+      # ==========================================
+      - name: DevEx Report
+        if: always()
+        run: |
+          cat << EOF >> $GITHUB_STEP_SUMMARY
+          ## Resumo da Validação do PR (Backend)
+          
+          Job Status: **${{ job.status }}**
+          
+          | Step | Status |
+          | :--- | :--- |
+          | Branch Name | \`${{ steps.validate-branch.conclusion }}\` |
+          | PR Title | \`${{ steps.validate-pr-title.conclusion }}\` |
+          | Security Audit | \`${{ steps.security-audit.conclusion }}\` |
+          | Lint & Format | \`${{ steps.lint-format.conclusion }}\` |
+          | Unit Tests | \`${{ steps.unit-tests.conclusion }}\` |
+          | Build | \`${{ steps.build.conclusion }}\` |
+          
+          > Em caso de falha, consulte os logs do step correspondente acima para análise técnica.
+          EOF
