@@ -32,8 +32,19 @@ public class UsersController(IUserService userService) : ControllerBase
     [HttpPost]
     public async Task<ActionResult<UserDto>> CreateUser(CreateUserDto dto)
     {
-        var user = await _userService.CreateUserAsync(dto);
-        return CreatedAtAction(nameof(GetUser), new { userId = user.UserId }, user);
+        try
+        {
+            var user = await _userService.CreateUserAsync(dto);
+            return CreatedAtAction(nameof(GetUser), new { userId = user.UserId }, user);
+        }
+        catch (EmailAlreadyExistsException)
+        {
+            return Conflict(new { error = "Endereço de email já está em uso" });
+        }
+        catch (UserCreationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
     }
 
     // Atenção aos verbos HTTP!   https://medium.com/@gabrielrufino.js/put-vs-patch-pare-de-agora-escolher-errado-533b8c6058d9
