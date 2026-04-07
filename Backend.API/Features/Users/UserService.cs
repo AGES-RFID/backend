@@ -1,6 +1,18 @@
 using Backend.Database;
 using Microsoft.EntityFrameworkCore;
+using BCrypt.Net;
+
 namespace Backend.Features.Users;
+
+public class UserCreationException : Exception
+{
+    public UserCreationException(string message) : base(message) { }
+}
+
+public class EmailAlreadyExistsException : Exception
+{
+    public EmailAlreadyExistsException(string email) : base($"Um usuário com o email {email} já existe") { }
+}
 
 public interface IUserService
 {
@@ -32,7 +44,29 @@ public class UserService(AppDbContext db) : IUserService
 
     public async Task<UserDto> CreateUserAsync(CreateUserDto dto)
     {
-        var user = await _db.Users.AddAsync(new User { Name = dto.Name, Email = dto.Email });
+        // Validate role
+        if (!Enum.TryParse<UserRole>(dto.Role, ignoreCase: true, out var role))
+        {
+            throw new UserCreationException($"Invalid role '{dto.Role}'. Valid roles are: {string.Join(", ", Enum.GetNames(typeof(UserRole)))}");
+        }
+
+        // Check if email already exists
+        var existingUser = await _db.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
+        if (existingUser != null)
+        {
+            throw new EmailAlreadyExistsException(dto.Email);
+        }
+
+        // Hash the password
+        var passwordHash = BCrypt.HashPassword(dto.Password);
+
+        var user = await _db.Users.AddAsync(new User
+        {
+            Name = dto.Name,
+            Email = dto.Email,
+            PasswordHash = passwordHash,
+            Role = role
+        });
 
         await _db.SaveChangesAsync();
 
