@@ -39,7 +39,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .IsRequired()
             .HasMaxLength(16)
             .HasColumnType("varchar");
-        
+
         builder.HasIndex(u => u.PhoneNumber)
             .IsUnique();
 
