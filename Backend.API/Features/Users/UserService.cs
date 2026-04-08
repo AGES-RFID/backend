@@ -58,7 +58,7 @@ public class UserService(AppDbContext db) : IUserService
         }
 
         // Hash the password
-        var passwordHash = BCrypt.HashPassword(dto.Password);
+        var passwordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password);
 
         var user = await _db.Users.AddAsync(new User
         {
