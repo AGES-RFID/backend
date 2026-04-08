@@ -36,7 +36,7 @@ public class UserControllerTests(CustomWebApplicationFactory factory) : IClassFi
     [Fact]
     public async Task CreateUser_ShouldReturnCreatedUser()
     {
-        var newUser = new CreateUserDto { Name = "Fulaninho", Email = "fulano@email.com" };
+        var newUser = new CreateUserDto { Name = "Fulaninho", Email = "fulano@email.com", PasswordHash = "hash", Cpf = "12345678901", PhoneNumber = "5551999990000" };
 
         var response = await _client.PostAsync("/api/users", JsonContent.Create(newUser));
 
@@ -52,7 +52,7 @@ public class UserControllerTests(CustomWebApplicationFactory factory) : IClassFi
     [Fact]
     public async Task GetUser_ShouldReturnCreatedUser()
     {
-        var newUser = new CreateUserDto { Name = "Fulaninho", Email = "fulano@email.com" };
+        var newUser = new CreateUserDto { Name = "Fulaninho", Email = "fulano@email.com", PasswordHash = "hash", Cpf = "12345678901", PhoneNumber = "5551999990000" };
 
         var createResponse = await _client.PostAsync("/api/users", JsonContent.Create(newUser));
         createResponse.EnsureSuccessStatusCode();

@@ -63,7 +63,7 @@ public class UsersControllerTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var dto = new CreateUserDto { Name = "Bob", Email = "bob@example.com" };
+        var dto = new CreateUserDto { Name = "Bob", Email = "bob@example.com", PasswordHash = "hash", Cpf = "12345678901", PhoneNumber = "5551999990000" };
 
         var userService = Substitute.For<IUserService>();
         userService
@@ -88,7 +88,7 @@ public class UsersControllerTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var dto = new CreateUserDto { Name = "Carol", Email = "carol@example.com" };
+        var dto = new CreateUserDto { Name = "Carol", Email = "carol@example.com", PasswordHash = "hash", Cpf = "12345678901", PhoneNumber = "5551999990000" };
 
         var userService = Substitute.For<IUserService>();
         userService.UpdateUserAsync(userId, Arg.Any<CreateUserDto>())

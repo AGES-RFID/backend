@@ -1,5 +1,8 @@
 using System.Reflection;
+using Backend.Features.Accesses;
+using Backend.Features.Tags;
 using Backend.Features.Users;
+using Backend.Features.Vehicles;
 using Microsoft.EntityFrameworkCore;
 
 namespace Backend.Database;
@@ -7,6 +10,9 @@ namespace Backend.Database;
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
     public DbSet<User> Users { get; set; }
+    public DbSet<Vehicle> Vehicles { get; set; }
+    public DbSet<Tag> Tags { get; set; }
+    public DbSet<Access> Accesses { get; set; }
 
     public override int SaveChanges()
     {

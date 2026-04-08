@@ -1,5 +1,4 @@
-using Microsoft.AspNetCore.Antiforgery;
-using Microsoft.AspNetCore.Identity;
+using Backend.Features.Vehicles;
 
 namespace Backend.Features.Users;
 
@@ -14,4 +13,6 @@ public class User
     public UserRole Role { get; set; } = UserRole.Client;
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+
+    public ICollection<Vehicle> Vehicles { get; set; } = [];
 }
