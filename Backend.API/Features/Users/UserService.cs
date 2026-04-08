@@ -32,7 +32,14 @@ public class UserService(AppDbContext db) : IUserService
 
     public async Task<UserDto> CreateUserAsync(CreateUserDto dto)
     {
-        var user = await _db.Users.AddAsync(new User { Name = dto.Name, Email = dto.Email });
+        var user = await _db.Users.AddAsync(new User
+        {
+            Name = dto.Name,
+            Email = dto.Email,
+            PasswordHash = dto.PasswordHash,
+            Cpf = dto.Cpf,
+            PhoneNumber = dto.PhoneNumber
+        });
 
         await _db.SaveChangesAsync();
 
@@ -46,6 +53,9 @@ public class UserService(AppDbContext db) : IUserService
 
         user.Name = dto.Name;
         user.Email = dto.Email;
+        user.PasswordHash = dto.PasswordHash;
+        user.Cpf = dto.Cpf;
+        user.PhoneNumber = dto.PhoneNumber;
         user.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();

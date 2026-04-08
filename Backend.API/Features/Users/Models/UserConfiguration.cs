@@ -10,6 +10,46 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
     {
         builder.HasKey(u => u.UserId);
 
+        builder.Property(u => u.Name)
+            .IsRequired()
+            .HasMaxLength(30);
+
+        builder.Property(u => u.Email)
+        .IsRequired()
+        .HasMaxLength(255)
+        .HasColumnType("varchar");
+
+        builder.HasIndex(u => u.Email)
+            .IsUnique();
+
+
+        builder.Property(u => u.PasswordHash)
+            .IsRequired();
+
+        builder.Property(u => u.Cpf)
+            .IsRequired()
+            .HasMaxLength(11)
+            .HasColumnType("varchar");
+
+        builder.HasIndex(u => u.Cpf)
+            .IsUnique();
+
+
+        builder.Property(u => u.PhoneNumber)
+            .IsRequired()
+            .HasMaxLength(16)
+            .HasColumnType("varchar");
+        
+        builder.HasIndex(u => u.PhoneNumber)
+            .IsUnique();
+
+        builder.Property(u => u.Role)
+            .IsRequired()
+            .HasConversion<string>()
+            .HasMaxLength(20)
+            .IsRequired();
+
+
         builder.Property(u => u.CreatedAt)
             .IsRequired()
             .HasDefaultValueSql("now()")
