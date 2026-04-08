@@ -1,6 +1,10 @@
 using System.Reflection;
 using Backend.Features.Users;
+<<<<<<< HEAD
 using Backend.Features.Vehicles;
+=======
+using Backend.Features.Tags;
+>>>>>>> b691c44 (feat: all tag routes implemented)
 using Microsoft.EntityFrameworkCore;
 
 namespace Backend.Database;
@@ -8,7 +12,13 @@ namespace Backend.Database;
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
     public DbSet<User> Users { get; set; }
+<<<<<<< HEAD
     public DbSet<Vehicle> Vehicles { get; set; }
+=======
+    public DbSet<Tag> Tags { get; set; }
+    public DbSet<Vehicle> Vehicles { get; set; }
+
+>>>>>>> b691c44 (feat: all tag routes implemented)
     public override int SaveChanges()
     {
         ApplyTimestamps();
