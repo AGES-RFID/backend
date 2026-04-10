@@ -35,7 +35,12 @@ if (builder.Environment.IsDevelopment())
     });
 }
 
-builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString).UseSnakeCaseNamingConvention());
+builder.Services.AddDbContext<AppDbContext>(options => 
+    options.UseNpgsql(connectionString, o => 
+        o.MapEnum<UserRole>("user_role", "public")
+    )
+    .UseSnakeCaseNamingConvention()
+);
 
 // Register feature services
 builder.Services.AddScoped<IUserService, UserService>();

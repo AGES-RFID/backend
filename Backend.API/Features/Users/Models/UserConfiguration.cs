@@ -11,23 +11,20 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.HasKey(u => u.UserId);
 
         builder.Property(u => u.Email)
-            .IsRequired()
-            .HasMaxLength(255);
+            .IsRequired();
 
         builder.HasIndex(u => u.Email)
             .IsUnique();
 
         builder.Property(u => u.Name)
-            .IsRequired()
-            .HasMaxLength(255);
+            .IsRequired();
 
         builder.Property(u => u.PasswordHash)
             .IsRequired();
 
         builder.Property(u => u.Role)
             .IsRequired()
-            .HasConversion<string>()
-            .HasMaxLength(50);
+            .HasColumnType("user_role");  
 
         builder.Property(u => u.CreatedAt)
             .IsRequired()
