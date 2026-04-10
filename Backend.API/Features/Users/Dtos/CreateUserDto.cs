@@ -11,7 +11,7 @@ public class CreateUserDto
     [EmailAddress]
     public required string Email { get; set; }
     [Required]
-    public required string PasswordHash { get; set; }
+    public required string Password { get; set; }
     [Required]
     [RegularExpression(@"^\d{11}$")]
     public required string Cpf { get; set; }

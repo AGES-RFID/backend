@@ -11,6 +11,10 @@ namespace Backend.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            // Create the missing enums
+            migrationBuilder.Sql("CREATE TYPE tag_status AS ENUM ('Available', 'InUse', 'Inactive');");
+            migrationBuilder.Sql("CREATE TYPE access_type AS ENUM ('Entry', 'Exit');");
+
             migrationBuilder.CreateTable(
                 name: "vehicles",
                 columns: table => new
@@ -38,15 +42,15 @@ namespace Backend.Migrations
                 columns: table => new
                 {
                     tag_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    veichle_id = table.Column<Guid>(type: "uuid", nullable: true),
-                    status = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false)
+                    vehicle_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    status = table.Column<string>(type: "tag_status", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("pk_tags", x => x.tag_id);
                     table.ForeignKey(
-                        name: "fk_tags_vehicles_veichle_id",
-                        column: x => x.veichle_id,
+                        name: "fk_tags_vehicles_vehicle_id",
+                        column: x => x.vehicle_id,
                         principalTable: "vehicles",
                         principalColumn: "vehicle_id",
                         onDelete: ReferentialAction.SetNull);
@@ -58,7 +62,7 @@ namespace Backend.Migrations
                 {
                     access_id = table.Column<Guid>(type: "uuid", nullable: false),
                     tag_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    type = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    type = table.Column<string>(type: "access_type", nullable: false),
                     timestamp = table.Column<DateTime>(type: "timestamptz", nullable: false)
                 },
                 constraints: table =>
@@ -78,9 +82,9 @@ namespace Backend.Migrations
                 column: "tag_id");
 
             migrationBuilder.CreateIndex(
-                name: "ix_tags_veichle_id",
+                name: "ix_tags_vehicle_id",
                 table: "tags",
-                column: "veichle_id",
+                column: "vehicle_id",
                 unique: true,
                 filter: "status = 'InUse'");
 
@@ -101,6 +105,10 @@ namespace Backend.Migrations
         {
             migrationBuilder.DropTable(
                 name: "accesses");
+
+            // Drop the enums
+            migrationBuilder.Sql("DROP TYPE access_type;");
+            migrationBuilder.Sql("DROP TYPE tag_status;");
 
             migrationBuilder.DropTable(
                 name: "tags");

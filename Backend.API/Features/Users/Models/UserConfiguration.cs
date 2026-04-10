@@ -46,8 +46,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.Role)
             .IsRequired()
             .HasConversion<string>()
-            .HasMaxLength(20)
-            .IsRequired();
+            .HasColumnType("user_role");
 
 
         builder.Property(u => u.CreatedAt)

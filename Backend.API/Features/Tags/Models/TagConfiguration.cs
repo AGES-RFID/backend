@@ -12,15 +12,15 @@ public class TagConfiguration : IEntityTypeConfiguration<Tag>
         builder.Property(t => t.Status)
             .IsRequired()
             .HasConversion<string>()
-            .HasMaxLength(20);
+            .HasColumnType("tag_status");
 
-        builder.HasIndex(t => t.VeichleId)
+        builder.HasIndex(t => t.VehicleId)
             .IsUnique()
             .HasFilter("status = 'InUse'");
 
-        builder.HasOne(t => t.Veichle)
+        builder.HasOne(t => t.Vehicle)
             .WithMany(v => v.Tags)
-            .HasForeignKey(t => t.VeichleId)
+            .HasForeignKey(t => t.VehicleId)
             .OnDelete(DeleteBehavior.SetNull);
     }
 }

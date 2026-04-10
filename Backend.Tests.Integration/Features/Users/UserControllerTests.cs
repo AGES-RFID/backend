@@ -33,38 +33,4 @@ public class UserControllerTests(CustomWebApplicationFactory factory) : IClassFi
         Assert.Empty(users);
     }
 
-    [Fact]
-    public async Task CreateUser_ShouldReturnCreatedUser()
-    {
-        var newUser = new CreateUserDto { Name = "Fulaninho", Email = "fulano@email.com", PasswordHash = "hash", Cpf = "12345678901", PhoneNumber = "5551999990000" };
-
-        var response = await _client.PostAsync("/api/users", JsonContent.Create(newUser));
-
-        response.EnsureSuccessStatusCode();
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-
-        var createdUser = await response.Content.ReadFromJsonAsync<UserDto>();
-        Assert.NotNull(createdUser);
-        Assert.Equal(newUser.Name, createdUser.Name);
-        Assert.Equal(newUser.Email, createdUser.Email);
-    }
-
-    [Fact]
-    public async Task GetUser_ShouldReturnCreatedUser()
-    {
-        var newUser = new CreateUserDto { Name = "Fulaninho", Email = "fulano@email.com", PasswordHash = "hash", Cpf = "12345678901", PhoneNumber = "5551999990000" };
-
-        var createResponse = await _client.PostAsync("/api/users", JsonContent.Create(newUser));
-        createResponse.EnsureSuccessStatusCode();
-        var createdUser = await createResponse.Content.ReadFromJsonAsync<UserDto>();
-
-        var getResponse = await _client.GetAsync($"/api/users/{createdUser?.UserId}");
-        getResponse.EnsureSuccessStatusCode();
-        var fetchedUser = await getResponse.Content.ReadFromJsonAsync<UserDto>();
-
-        Assert.NotNull(fetchedUser);
-        Assert.Equal(createdUser?.UserId, fetchedUser.UserId);
-        Assert.Equal(createdUser?.Name, fetchedUser.Name);
-        Assert.Equal(createdUser?.Email, fetchedUser.Email);
-    }
 }

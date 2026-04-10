@@ -10,7 +10,7 @@ public class User
     public required string PasswordHash { get; set; }
     public required string Cpf { get; set; }
     public required string PhoneNumber { get; set; }
-    public UserRole Role { get; set; } = UserRole.Client;
+    public required UserRole Role { get; set; } = UserRole.Client;
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 

@@ -32,6 +32,7 @@ public class TagDbConstraintTests : IClassFixture<CustomWebApplicationFactory>, 
         var user = new User
         {
             Name = "Test User",
+            Role = UserRole.Client,
             Email = $"user{suffix}@test.com",
             PasswordHash = "hash",
             Cpf = $"{suffix.PadLeft(11, '0')}",
@@ -65,7 +66,7 @@ public class TagDbConstraintTests : IClassFixture<CustomWebApplicationFactory>, 
 
         var persisted = await db.Tags.FindAsync(tag.TagId);
         Assert.NotNull(persisted);
-        Assert.Null(persisted.VeichleId);
+        Assert.Null(persisted.VehicleId);
         Assert.Equal(TagStatus.Available, persisted.Status);
     }
 
@@ -75,13 +76,13 @@ public class TagDbConstraintTests : IClassFixture<CustomWebApplicationFactory>, 
         var db = CreateDbContext();
         var vehicle = await CreateVehicleAsync(db, "10");
 
-        var tag = new Tag { VeichleId = vehicle.VehicleId, Status = TagStatus.InUse };
+        var tag = new Tag { VehicleId = vehicle.VehicleId, Status = TagStatus.InUse };
         db.Tags.Add(tag);
         await db.SaveChangesAsync();
 
         var persisted = await db.Tags.FindAsync(tag.TagId);
         Assert.NotNull(persisted);
-        Assert.Equal(vehicle.VehicleId, persisted.VeichleId);
+        Assert.Equal(vehicle.VehicleId, persisted.VehicleId);
         Assert.Equal(TagStatus.InUse, persisted.Status);
     }
 
@@ -91,10 +92,10 @@ public class TagDbConstraintTests : IClassFixture<CustomWebApplicationFactory>, 
         var db = CreateDbContext();
         var vehicle = await CreateVehicleAsync(db, "20");
 
-        db.Tags.Add(new Tag { VeichleId = vehicle.VehicleId, Status = TagStatus.InUse });
+        db.Tags.Add(new Tag { VehicleId = vehicle.VehicleId, Status = TagStatus.InUse });
         await db.SaveChangesAsync();
 
-        db.Tags.Add(new Tag { VeichleId = vehicle.VehicleId, Status = TagStatus.InUse });
+        db.Tags.Add(new Tag { VehicleId = vehicle.VehicleId, Status = TagStatus.InUse });
         await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
     }
 
@@ -104,11 +105,11 @@ public class TagDbConstraintTests : IClassFixture<CustomWebApplicationFactory>, 
         var db = CreateDbContext();
         var vehicle = await CreateVehicleAsync(db, "30");
 
-        db.Tags.Add(new Tag { VeichleId = vehicle.VehicleId, Status = TagStatus.InUse });
-        db.Tags.Add(new Tag { VeichleId = vehicle.VehicleId, Status = TagStatus.Inactive });
+        db.Tags.Add(new Tag { VehicleId = vehicle.VehicleId, Status = TagStatus.InUse });
+        db.Tags.Add(new Tag { VehicleId = vehicle.VehicleId, Status = TagStatus.Inactive });
         await db.SaveChangesAsync();
 
-        var tags = await db.Tags.Where(t => t.VeichleId == vehicle.VehicleId).ToListAsync();
+        var tags = await db.Tags.Where(t => t.VehicleId == vehicle.VehicleId).ToListAsync();
         Assert.Equal(2, tags.Count);
     }
 
@@ -118,7 +119,7 @@ public class TagDbConstraintTests : IClassFixture<CustomWebApplicationFactory>, 
         var db = CreateDbContext();
         var vehicle = await CreateVehicleAsync(db, "40");
 
-        var tag = new Tag { VeichleId = vehicle.VehicleId, Status = TagStatus.InUse };
+        var tag = new Tag { VehicleId = vehicle.VehicleId, Status = TagStatus.InUse };
         db.Tags.Add(tag);
         await db.SaveChangesAsync();
 
@@ -127,6 +128,6 @@ public class TagDbConstraintTests : IClassFixture<CustomWebApplicationFactory>, 
 
         var updated = await db.Tags.FindAsync(tag.TagId);
         Assert.NotNull(updated);
-        Assert.Null(updated.VeichleId);
+        Assert.Null(updated.VehicleId);
     }
 }

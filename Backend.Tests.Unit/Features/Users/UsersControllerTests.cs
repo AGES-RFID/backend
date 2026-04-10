@@ -58,52 +58,5 @@ public class UsersControllerTests
         await userService.Received(1).GetUserAsync(userId);
     }
 
-    [Fact]
-    public async Task UpdateUser_WhenServiceThrowsKeyNotFoundException_ReturnsNotFound()
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-        var dto = new CreateUserDto { Name = "Bob", Email = "bob@example.com", PasswordHash = "hash", Cpf = "12345678901", PhoneNumber = "5551999990000" };
-
-        var userService = Substitute.For<IUserService>();
-        userService
-            .UpdateUserAsync(userId, Arg.Any<CreateUserDto>())
-            .Returns(Task.FromException<UserDto>(new KeyNotFoundException("not found")));
-
-        var controller = new UsersController(userService);
-
-        // Act
-        var result = await controller.UpdateUser(userId, dto);
-
-        // Assert
-        Assert.IsType<NotFoundResult>(result);
-        await userService.Received(1).UpdateUserAsync(
-            userId,
-            Arg.Is<CreateUserDto>(d => d.Name == dto.Name && d.Email == dto.Email)
-        );
-    }
-
-    [Fact]
-    public async Task UpdateUser_WhenServiceSucceeds_ReturnsNoContent()
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-        var dto = new CreateUserDto { Name = "Carol", Email = "carol@example.com", PasswordHash = "hash", Cpf = "12345678901", PhoneNumber = "5551999990000" };
-
-        var userService = Substitute.For<IUserService>();
-        userService.UpdateUserAsync(userId, Arg.Any<CreateUserDto>())
-            .Returns(Task.FromResult(new UserDto { UserId = userId, Name = dto.Name, Email = dto.Email }));
-
-        var controller = new UsersController(userService);
-
-        // Act
-        var result = await controller.UpdateUser(userId, dto);
-
-        // Assert
-        Assert.IsType<NoContentResult>(result);
-        await userService.Received(1).UpdateUserAsync(
-            userId,
-            Arg.Is<CreateUserDto>(d => d.Name == dto.Name && d.Email == dto.Email)
-        );
-    }
+ 
 }

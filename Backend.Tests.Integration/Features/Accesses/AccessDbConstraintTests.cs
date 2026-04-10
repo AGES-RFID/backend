@@ -34,6 +34,7 @@ public class AccessDbConstraintTests : IClassFixture<CustomWebApplicationFactory
         {
             Name = "Test User",
             Email = $"user{suffix}@test.com",
+            Role = UserRole.Client,
             PasswordHash = "hash",
             Cpf = $"{suffix.PadLeft(11, '0')}",
             PhoneNumber = $"{suffix.PadLeft(16, '0')}",
@@ -52,7 +53,7 @@ public class AccessDbConstraintTests : IClassFixture<CustomWebApplicationFactory
         db.Vehicles.Add(vehicle);
         await db.SaveChangesAsync();
 
-        var tag = new Tag { VeichleId = vehicle.VehicleId, Status = TagStatus.InUse };
+        var tag = new Tag { VehicleId = vehicle.VehicleId, Status = TagStatus.InUse };
         db.Tags.Add(tag);
         await db.SaveChangesAsync();
 

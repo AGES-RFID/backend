@@ -10,6 +10,9 @@ namespace Backend.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            // Create the user_role enum type
+            migrationBuilder.Sql("CREATE TYPE user_role AS ENUM ('Admin', 'Client');");
+
             migrationBuilder.AlterColumn<string>(
                 name: "name",
                 table: "users",
@@ -54,10 +57,9 @@ namespace Backend.Migrations
             migrationBuilder.AddColumn<string>(
                 name: "role",
                 table: "users",
-                type: "character varying(20)",
-                maxLength: 20,
+                type: "user_role",
                 nullable: false,
-                defaultValue: "");
+                defaultValue: "Client");
 
             migrationBuilder.CreateIndex(
                 name: "ix_users_cpf",

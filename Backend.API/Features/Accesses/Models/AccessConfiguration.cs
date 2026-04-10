@@ -12,7 +12,7 @@ public class AccessConfiguration : IEntityTypeConfiguration<Access>
         builder.Property(a => a.Type)
             .IsRequired()
             .HasConversion<string>()
-            .HasMaxLength(20);
+            .HasColumnType("access_type");
 
         builder.Property(a => a.Timestamp)
             .IsRequired()

@@ -6,8 +6,6 @@ public interface IUserService
 {
     Task<UserDto> GetUserAsync(Guid id);
     Task<IEnumerable<UserDto>> GetAllUsersAsync();
-    Task<UserDto> CreateUserAsync(CreateUserDto dto);
-    Task<UserDto> UpdateUserAsync(Guid id, CreateUserDto dto);
     Task DeleteUserAsync(Guid id);
 }
 
@@ -30,39 +28,9 @@ public class UserService(AppDbContext db) : IUserService
         return users;
     }
 
-    public async Task<UserDto> CreateUserAsync(CreateUserDto dto)
-    {
-        var user = await _db.Users.AddAsync(new User
-        {
-            Name = dto.Name,
-            Email = dto.Email,
-            PasswordHash = dto.PasswordHash,
-            Cpf = dto.Cpf,
-            PhoneNumber = dto.PhoneNumber
-        });
+    
 
-        await _db.SaveChangesAsync();
-
-        return UserDto.FromModel(user.Entity);
-    }
-
-    public async Task<UserDto> UpdateUserAsync(Guid id, CreateUserDto dto)
-    {
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.UserId == id)
-            ?? throw new KeyNotFoundException($"User with id {id} not found");
-
-        user.Name = dto.Name;
-        user.Email = dto.Email;
-        user.PasswordHash = dto.PasswordHash;
-        user.Cpf = dto.Cpf;
-        user.PhoneNumber = dto.PhoneNumber;
-        user.UpdatedAt = DateTime.UtcNow;
-
-        await _db.SaveChangesAsync();
-
-        return UserDto.FromModel(user);
-    }
-
+   
     public async Task DeleteUserAsync(Guid id)
     {
         var user = await _db.Users.FirstOrDefaultAsync(u => u.UserId == id)

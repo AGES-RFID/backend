@@ -30,6 +30,7 @@ public class VehicleDbConstraintTests : IClassFixture<CustomWebApplicationFactor
     private static User BuildUser(string suffix = "") => new()
     {
         Name = "Test User",
+        Role = UserRole.Client,
         Email = $"user{suffix}@test.com",
         PasswordHash = "hash",
         Cpf = $"{suffix.PadLeft(11, '0')}",
