@@ -28,7 +28,7 @@ public class UsersController(IUserService userService) : ControllerBase
             return NotFound();
         }
     }
-    
+
     [HttpDelete("{userId}")]
     public async Task<IActionResult> DeleteUser(Guid userId)
     {

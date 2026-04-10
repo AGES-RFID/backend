@@ -28,9 +28,6 @@ public class UserService(AppDbContext db) : IUserService
         return users;
     }
 
-    
-
-   
     public async Task DeleteUserAsync(Guid id)
     {
         var user = await _db.Users.FirstOrDefaultAsync(u => u.UserId == id)

@@ -57,6 +57,4 @@ public class UsersControllerTests
 
         await userService.Received(1).GetUserAsync(userId);
     }
-
- 
 }
