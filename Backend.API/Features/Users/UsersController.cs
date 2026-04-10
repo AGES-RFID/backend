@@ -55,8 +55,13 @@ public class UsersController(IUserService userService) : ControllerBase
     {
         try
         {
-            await _userService.UpdateUserAsync(userId, dto);
-            return NoContent();
+            var updateUser = await _userService.UpdateUserAsync(userId, dto);
+            return Ok(updateUser);
+        }
+
+        catch (EmailAlreadyExistsException)
+        {
+            return Conflict(new { error = "Endereço de email já está em uso" });
         }
         catch (KeyNotFoundException)
         {

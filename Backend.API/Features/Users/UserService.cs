@@ -75,6 +75,12 @@ public class UserService(AppDbContext db) : IUserService
 
     public async Task<UserDto> UpdateUserAsync(Guid id, CreateUserDto dto)
     {
+        var emailInUse = await _db.Users.AnyAsync(u => u.Email == dto.Email && u.UserId != id);
+            if (emailInUse)
+        {
+            throw new EmailAlreadyExistsException(dto.Email);
+        }
+
         var user = await _db.Users.FirstOrDefaultAsync(u => u.UserId == id)
             ?? throw new KeyNotFoundException($"User with id {id} not found");
 

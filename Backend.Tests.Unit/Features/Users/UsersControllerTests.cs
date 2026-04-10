@@ -88,6 +88,7 @@ public class UsersControllerTests
     [Fact]
     public async Task UpdateUser_WhenServiceSucceeds_ReturnsNoContent()
     {
+
         // Arrange
         var userId = Guid.NewGuid();
         var dto = new CreateUserDto { Name = "Carol", Email = "carol@example.com", Password = "password123", Role = "admin" };
@@ -102,7 +103,7 @@ public class UsersControllerTests
         var result = await controller.UpdateUser(userId, dto);
 
         // Assert
-        Assert.IsType<NoContentResult>(result);
+        Assert.IsType<OkObjectResult>(result);
         await userService.Received(1).UpdateUserAsync(
             userId,
             Arg.Is<CreateUserDto>(d => d.Name == dto.Name && d.Email == dto.Email && d.Role == dto.Role)
