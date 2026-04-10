@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 
 using Backend.Features.Users;
 using Backend.Database;
+using Backend.Features.Vehicles;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -39,6 +40,7 @@ builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connect
 
 // Register feature services
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IVehicleService, VehicleService>();
 
 var app = builder.Build();
 
