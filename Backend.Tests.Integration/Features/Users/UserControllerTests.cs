@@ -28,7 +28,7 @@ public class UserControllerTests(CustomWebApplicationFactory factory) : IClassFi
         response.EnsureSuccessStatusCode();
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-        var users = await response.Content.ReadFromJsonAsync<List<User>>();
+        var users = await response.Content.ReadFromJsonAsync<List<UserDto>>();
         Assert.NotNull(users);
         Assert.Empty(users);
     }
@@ -36,7 +36,7 @@ public class UserControllerTests(CustomWebApplicationFactory factory) : IClassFi
     [Fact]
     public async Task CreateUser_ShouldReturnCreatedUser()
     {
-        var newUser = new CreateUserDto { Name = "Fulaninho", Email = "fulano@email.com" };
+        var newUser = new CreateUserDto { Name = "Fulaninho", Email = "fulano@email.com", Password = "password123", Role = "admin" };
 
         var response = await _client.PostAsync("/api/users", JsonContent.Create(newUser));
 
@@ -52,7 +52,7 @@ public class UserControllerTests(CustomWebApplicationFactory factory) : IClassFi
     [Fact]
     public async Task GetUser_ShouldReturnCreatedUser()
     {
-        var newUser = new CreateUserDto { Name = "Fulaninho", Email = "fulano@email.com" };
+        var newUser = new CreateUserDto { Name = "Fulaninho", Email = "fulano@email.com", Password = "password123", Role = "admin" };
 
         var createResponse = await _client.PostAsync("/api/users", JsonContent.Create(newUser));
         createResponse.EnsureSuccessStatusCode();

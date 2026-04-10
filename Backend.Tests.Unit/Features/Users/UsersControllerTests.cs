@@ -36,7 +36,8 @@ public class UsersControllerTests
         {
             UserId = userId,
             Name = "Alice",
-            Email = "alice@example.com"
+            Email = "alice@example.com",
+            Role = "admin"
         };
 
         var userService = Substitute.For<IUserService>();
@@ -54,6 +55,7 @@ public class UsersControllerTests
         Assert.Equal(expected.UserId, dto.UserId);
         Assert.Equal(expected.Name, dto.Name);
         Assert.Equal(expected.Email, dto.Email);
+        Assert.Equal(expected.Role, dto.Role);
 
         await userService.Received(1).GetUserAsync(userId);
     }
@@ -63,7 +65,7 @@ public class UsersControllerTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var dto = new CreateUserDto { Name = "Bob", Email = "bob@example.com" };
+        var dto = new CreateUserDto { Name = "Bob", Email = "bob@example.com", Password = "password123", Role = "admin" };
 
         var userService = Substitute.For<IUserService>();
         userService
@@ -79,7 +81,7 @@ public class UsersControllerTests
         Assert.IsType<NotFoundResult>(result);
         await userService.Received(1).UpdateUserAsync(
             userId,
-            Arg.Is<CreateUserDto>(d => d.Name == dto.Name && d.Email == dto.Email)
+            Arg.Is<CreateUserDto>(d => d.Name == dto.Name && d.Email == dto.Email && d.Role == dto.Role)
         );
     }
 
@@ -88,11 +90,11 @@ public class UsersControllerTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var dto = new CreateUserDto { Name = "Carol", Email = "carol@example.com" };
+        var dto = new CreateUserDto { Name = "Carol", Email = "carol@example.com", Password = "password123", Role = "admin" };
 
         var userService = Substitute.For<IUserService>();
         userService.UpdateUserAsync(userId, Arg.Any<CreateUserDto>())
-            .Returns(Task.FromResult(new UserDto { UserId = userId, Name = dto.Name, Email = dto.Email }));
+            .Returns(Task.FromResult(new UserDto { UserId = userId, Name = dto.Name, Email = dto.Email, Role = dto.Role }));
 
         var controller = new UsersController(userService);
 
@@ -103,7 +105,7 @@ public class UsersControllerTests
         Assert.IsType<NoContentResult>(result);
         await userService.Received(1).UpdateUserAsync(
             userId,
-            Arg.Is<CreateUserDto>(d => d.Name == dto.Name && d.Email == dto.Email)
+            Arg.Is<CreateUserDto>(d => d.Name == dto.Name && d.Email == dto.Email && d.Role == dto.Role)
         );
     }
 }
