@@ -15,6 +15,20 @@ public class UsersController(IUserService userService) : ControllerBase
         return Ok(users);
     }
 
+    [HttpGet("by-name/{name}")]
+    public async Task<ActionResult<UserDto>> GetUserByName(string name)
+    {
+        try
+        {
+            var user = await _userService.GetUserByNameAsync(name);
+            return Ok(user);
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+    }
+
     [HttpGet("{userId}")]
     public async Task<ActionResult<UserDto>> GetUser(Guid userId)
     {
