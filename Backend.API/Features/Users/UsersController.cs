@@ -64,8 +64,8 @@ public class UsersController(IUserService userService) : ControllerBase
     // Atenção aos verbos HTTP!   https://medium.com/@gabrielrufino.js/put-vs-patch-pare-de-agora-escolher-errado-533b8c6058d9
     // PUT -> Atualiza TODOS os campos da entidade
     // PATCH -> Atualização partical da entidade (ex: apenas o nome ou email)
-    [HttpPut("{userId}")]
-    public async Task<IActionResult> UpdateUser(Guid userId, CreateUserDto dto)
+    [HttpPatch("{userId}")]
+    public async Task<IActionResult> UpdateUser(Guid userId, UpdateUserDto dto)
     {
         try
         {

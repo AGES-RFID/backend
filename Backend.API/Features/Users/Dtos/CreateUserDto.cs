@@ -14,5 +14,5 @@ public class CreateUserDto
     [MinLength(8)]
     public required string Password { get; set; }
     [Required]
-    public required string Role { get; set; }
+    public required UserRole Role { get; set; }
 }

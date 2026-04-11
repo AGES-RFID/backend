@@ -5,7 +5,7 @@ public class UserDto
     public Guid UserId { get; set; }
     public required string Name { get; set; }
     public required string Email { get; set; }
-    public required string Role { get; set; }
+    public required UserRole Role { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 
@@ -15,7 +15,7 @@ public class UserDto
         UserId = user.UserId,
         Name = user.Name,
         Email = user.Email,
-        Role = user.Role.ToString(),
+        Role = user.Role,
         CreatedAt = user.CreatedAt,
         UpdatedAt = user.UpdatedAt,
     };

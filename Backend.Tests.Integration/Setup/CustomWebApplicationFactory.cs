@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -27,6 +29,13 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
 
     private DbConnection? _dbConnection;
     private Respawner? _respawner;
+
+    // JSON serializer options matching the server configuration
+    public static JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
+    };
 
     public async Task InitializeAsync()
     {

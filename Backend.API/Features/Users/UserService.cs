@@ -20,7 +20,7 @@ public interface IUserService
     Task<UserDto> GetUserAsync(Guid id);
     Task<IEnumerable<UserDto>> GetAllUsersAsync();
     Task<UserDto> CreateUserAsync(CreateUserDto dto);
-    Task<UserDto> UpdateUserAsync(Guid id, CreateUserDto dto);
+    Task<UserDto> UpdateUserAsync(Guid id, UpdateUserDto dto);
     Task DeleteUserAsync(Guid id);
 }
 
@@ -53,12 +53,6 @@ public class UserService(AppDbContext db) : IUserService
 
     public async Task<UserDto> CreateUserAsync(CreateUserDto dto)
     {
-        // Validate role
-        if (!Enum.TryParse<UserRole>(dto.Role, ignoreCase: true, out var role))
-        {
-            throw new UserCreationException($"Invalid role '{dto.Role}'. Valid roles are: {string.Join(", ", Enum.GetNames(typeof(UserRole)))}");
-        }
-
         var existingUser = await _db.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
         if (existingUser != null)
         {
@@ -72,7 +66,7 @@ public class UserService(AppDbContext db) : IUserService
             Name = dto.Name,
             Email = dto.Email,
             PasswordHash = passwordHash,
-            Role = role
+            Role = dto.Role
         });
 
         await _db.SaveChangesAsync();
@@ -80,20 +74,24 @@ public class UserService(AppDbContext db) : IUserService
         return UserDto.FromModel(user.Entity);
     }
 
-    public async Task<UserDto> UpdateUserAsync(Guid id, CreateUserDto dto)
+    public async Task<UserDto> UpdateUserAsync(Guid id, UpdateUserDto dto)
     {
-        var emailInUse = await _db.Users.AnyAsync(u => u.Email == dto.Email && u.UserId != id);
-        if (emailInUse)
-        {
-            throw new EmailAlreadyExistsException(dto.Email);
-        }
-
         var user = await _db.Users.FirstOrDefaultAsync(u => u.UserId == id)
             ?? throw new KeyNotFoundException($"User with id {id} not found");
 
-        user.Name = dto.Name;
-        user.Email = dto.Email;
-        user.UpdatedAt = DateTime.UtcNow;
+        if (!string.IsNullOrEmpty(dto.Email))
+        {
+            var emailInUse = await _db.Users.AnyAsync(u => u.Email == dto.Email && u.UserId != id);
+            if (emailInUse) throw new EmailAlreadyExistsException(dto.Email);
+        }
+
+        user.Name = dto.Name ?? user.Name;
+        user.Email = dto.Email ?? user.Email;
+        user.Role = dto.Role ?? user.Role;
+        if (!string.IsNullOrEmpty(dto.Password))
+        {
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password);
+        }
 
         await _db.SaveChangesAsync();
 

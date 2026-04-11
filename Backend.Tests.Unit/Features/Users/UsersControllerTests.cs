@@ -25,7 +25,7 @@ public class UsersControllerTests
     public async Task GetUser_WhenServiceReturnsUser_ReturnsOkWithUser()
     {
         var userId = Guid.NewGuid();
-        var expected = new UserDto { UserId = userId, Name = "Alice", Email = "alice@example.com", Role = "admin" };
+        var expected = new UserDto { UserId = userId, Name = "Alice", Email = "alice@example.com", Role = UserRole.Admin };
 
         var userService = Substitute.For<IUserService>();
         userService.GetUserAsync(userId).Returns(expected);
@@ -42,60 +42,60 @@ public class UsersControllerTests
         await userService.Received(1).GetUserAsync(userId);
     }
 
-    [Fact]
-    public async Task UpdateUser_WhenServiceThrowsKeyNotFoundException_ReturnsNotFound()
-    {
-        var userId = Guid.NewGuid();
-        var dto = new CreateUserDto { Name = "Bob", Email = "bob@example.com", Password = "password123", Role = "admin" };
+     [Fact]
+     public async Task UpdateUser_WhenServiceThrowsKeyNotFoundException_ReturnsNotFound()
+     {
+         var userId = Guid.NewGuid();
+         var dto = new UpdateUserDto { Name = "Bob", Email = "bob@example.com" };
 
-        var userService = Substitute.For<IUserService>();
-        userService.UpdateUserAsync(userId, Arg.Any<CreateUserDto>())
-            .Returns(Task.FromException<UserDto>(new KeyNotFoundException("not found")));
+         var userService = Substitute.For<IUserService>();
+         userService.UpdateUserAsync(userId, Arg.Any<UpdateUserDto>())
+             .Returns(Task.FromException<UserDto>(new KeyNotFoundException("not found")));
 
-        var controller = new UsersController(userService);
-        var result = await controller.UpdateUser(userId, dto);
+         var controller = new UsersController(userService);
+         var result = await controller.UpdateUser(userId, dto);
 
-        Assert.IsType<NotFoundResult>(result);
-    }
+         Assert.IsType<NotFoundResult>(result);
+     }
 
-    [Fact]
-    public async Task UpdateUser_WhenServiceSucceeds_ReturnsOk()
-    {
-        var userId = Guid.NewGuid();
-        var dto = new CreateUserDto { Name = "Carol", Email = "carol@example.com", Password = "password123", Role = "admin" };
+     [Fact]
+     public async Task UpdateUser_WhenServiceSucceeds_ReturnsOk()
+     {
+         var userId = Guid.NewGuid();
+         var dto = new UpdateUserDto { Name = "Carol", Email = "carol@example.com" };
 
-        var userService = Substitute.For<IUserService>();
-        userService.UpdateUserAsync(userId, Arg.Any<CreateUserDto>())
-            .Returns(Task.FromResult(new UserDto { UserId = userId, Name = dto.Name, Email = dto.Email, Role = dto.Role }));
+         var userService = Substitute.For<IUserService>();
+         userService.UpdateUserAsync(userId, Arg.Any<UpdateUserDto>())
+             .Returns(Task.FromResult(new UserDto { UserId = userId, Name = dto.Name ?? "existing", Email = dto.Email ?? "existing@email.com", Role = UserRole.Admin }));
 
-        var controller = new UsersController(userService);
-        var result = await controller.UpdateUser(userId, dto);
+         var controller = new UsersController(userService);
+         var result = await controller.UpdateUser(userId, dto);
 
-        Assert.IsType<OkObjectResult>(result);
-    }
+         Assert.IsType<OkObjectResult>(result);
+     }
 
     [Fact]
     public async Task GetAllUsers_WhenServiceReturnsUsers_ReturnsOkWithList()
     {
         var userService = Substitute.For<IUserService>();
-        userService.GetAllUsersAsync().Returns(new List<UserDto>
-        {
-            new() { UserId = Guid.NewGuid(), Name = "Alice", Email = "alice@example.com", Role = "admin" },
-            new() { UserId = Guid.NewGuid(), Name = "Bob", Email = "bob@example.com", Role = "admin" }
-        });
+        userService.GetAllUsersAsync().Returns(
+        [
+            new() { UserId = Guid.NewGuid(), Name = "Alice", Email = "alice@example.com", Role = UserRole.Admin },
+             new() { UserId = Guid.NewGuid(), Name = "Bob", Email = "bob@example.com", Role = UserRole.Admin }
+        ]);
 
         var controller = new UsersController(userService);
         var result = await controller.GetAllUsers();
 
         var ok = Assert.IsType<OkObjectResult>(result.Result);
-        var list = Assert.IsAssignableFrom<IEnumerable<UserDto>>(ok.Value);
+        var list = Assert.IsType<IEnumerable<UserDto>>(ok.Value, exactMatch: false);
         Assert.Equal(2, list.Count());
     }
 
     [Fact]
     public async Task CreateUser_WhenServiceSucceeds_ReturnsCreated()
     {
-        var dto = new CreateUserDto { Name = "Alice", Email = "alice@example.com", Password = "password123", Role = "admin" };
+        var dto = new CreateUserDto { Name = "Alice", Email = "alice@example.com", Password = "password123", Role = UserRole.Admin };
         var created = new UserDto { UserId = Guid.NewGuid(), Name = dto.Name, Email = dto.Email, Role = dto.Role };
 
         var userService = Substitute.For<IUserService>();
@@ -110,7 +110,7 @@ public class UsersControllerTests
     [Fact]
     public async Task CreateUser_WhenEmailAlreadyExists_ReturnsConflict()
     {
-        var dto = new CreateUserDto { Name = "Alice", Email = "alice@example.com", Password = "password123", Role = "admin" };
+        var dto = new CreateUserDto { Name = "Alice", Email = "alice@example.com", Password = "password123", Role = UserRole.Admin };
 
         var userService = Substitute.For<IUserService>();
         userService.CreateUserAsync(Arg.Any<CreateUserDto>())
@@ -120,21 +120,6 @@ public class UsersControllerTests
         var result = await controller.CreateUser(dto);
 
         Assert.IsType<ConflictObjectResult>(result.Result);
-    }
-
-    [Fact]
-    public async Task CreateUser_WhenInvalidRole_ReturnsBadRequest()
-    {
-        var dto = new CreateUserDto { Name = "Alice", Email = "alice@example.com", Password = "password123", Role = "invalido" };
-
-        var userService = Substitute.For<IUserService>();
-        userService.CreateUserAsync(Arg.Any<CreateUserDto>())
-            .Returns(Task.FromException<UserDto>(new UserCreationException("Invalid role")));
-
-        var controller = new UsersController(userService);
-        var result = await controller.CreateUser(dto);
-
-        Assert.IsType<BadRequestObjectResult>(result.Result);
     }
 
     [Fact]
@@ -169,7 +154,7 @@ public class UsersControllerTests
     {
         var userService = Substitute.For<IUserService>();
         userService.GetUserByNameAsync("Alice")
-            .Returns(new UserDto { UserId = Guid.NewGuid(), Name = "Alice", Email = "alice@example.com", Role = "admin" });
+            .Returns(new UserDto { UserId = Guid.NewGuid(), Name = "Alice", Email = "alice@example.com", Role = UserRole.Admin });
 
         var controller = new UsersController(userService);
         var result = await controller.GetUserByName("Alice");
