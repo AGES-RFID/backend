@@ -59,14 +59,12 @@ public class UserService(AppDbContext db) : IUserService
             throw new UserCreationException($"Invalid role '{dto.Role}'. Valid roles are: {string.Join(", ", Enum.GetNames(typeof(UserRole)))}");
         }
 
-        // Check if email already exists
         var existingUser = await _db.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
         if (existingUser != null)
         {
             throw new EmailAlreadyExistsException(dto.Email);
         }
 
-        // Hash the password
         var passwordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password);
 
         var user = await _db.Users.AddAsync(new User
@@ -85,7 +83,7 @@ public class UserService(AppDbContext db) : IUserService
     public async Task<UserDto> UpdateUserAsync(Guid id, CreateUserDto dto)
     {
         var emailInUse = await _db.Users.AnyAsync(u => u.Email == dto.Email && u.UserId != id);
-            if (emailInUse)
+        if (emailInUse)
         {
             throw new EmailAlreadyExistsException(dto.Email);
         }

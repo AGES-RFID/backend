@@ -1,11 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using tests.Setup;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.EntityFrameworkCore;
-
 using Backend.Features.Users;
-using Backend.Database;
 
 namespace tests.Features.Users;
 
@@ -66,5 +62,48 @@ public class UserControllerTests(CustomWebApplicationFactory factory) : IClassFi
         Assert.Equal(createdUser?.UserId, fetchedUser.UserId);
         Assert.Equal(createdUser?.Name, fetchedUser.Name);
         Assert.Equal(createdUser?.Email, fetchedUser.Email);
+    }
+
+    [Fact]
+    public async Task GetUser_WhenNotFound_ShouldReturnNotFound()
+    {
+        var response = await _client.GetAsync($"/api/users/{Guid.NewGuid()}");
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateUser_WhenEmailAlreadyExists_ShouldReturnConflict()
+    {
+        var newUser = new CreateUserDto { Name = "Fulaninho", Email = "fulano@email.com", Password = "password123", Role = "admin" };
+        await _client.PostAsync("/api/users", JsonContent.Create(newUser));
+
+        var response = await _client.PostAsync("/api/users", JsonContent.Create(newUser));
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task DeleteUser_ShouldReturnNoContent()
+    {
+        var newUser = new CreateUserDto { Name = "Fulaninho", Email = "fulano@email.com", Password = "password123", Role = "admin" };
+        var createResponse = await _client.PostAsync("/api/users", JsonContent.Create(newUser));
+        var createdUser = await createResponse.Content.ReadFromJsonAsync<UserDto>();
+
+        var response = await _client.DeleteAsync($"/api/users/{createdUser?.UserId}");
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task UpdateUser_ShouldReturnUpdatedUser()
+    {
+        var newUser = new CreateUserDto { Name = "Fulaninho", Email = "fulano@email.com", Password = "password123", Role = "admin" };
+        var createResponse = await _client.PostAsync("/api/users", JsonContent.Create(newUser));
+        var createdUser = await createResponse.Content.ReadFromJsonAsync<UserDto>();
+
+        var updateDto = new CreateUserDto { Name = "Atualizado", Email = "atualizado@email.com", Password = "password123", Role = "admin" };
+        var response = await _client.PutAsync($"/api/users/{createdUser?.UserId}", JsonContent.Create(updateDto));
+
+        response.EnsureSuccessStatusCode();
+        var updatedUser = await response.Content.ReadFromJsonAsync<UserDto>();
+        Assert.Equal("Atualizado", updatedUser?.Name);
     }
 }

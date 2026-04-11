@@ -84,6 +84,7 @@ TestResults/
 *.trx
 *.coverage
 *.coveragexml
+coveragereport/
 
 # Security files
 *.pfx
