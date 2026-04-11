@@ -24,7 +24,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
 
         builder.Property(u => u.Role)
             .IsRequired()
-            .HasColumnType("user_role");  
+            .HasColumnType("user_role");
 
         builder.Property(u => u.CreatedAt)
             .IsRequired()

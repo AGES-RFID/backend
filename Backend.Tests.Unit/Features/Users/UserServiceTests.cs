@@ -79,64 +79,64 @@ public class UserServiceTests
         Assert.Equal(2, result.Count());
     }
 
-     [Fact]
-     public async Task CreateUserAsync_WhenValid_CreatesAndReturnsUser()
-     {
-         var db = CreateInMemoryDb();
-         var dto = new CreateUserDto { Name = "Alice", Email = "alice@example.com", Password = "password123", Role = UserRole.Admin };
+    [Fact]
+    public async Task CreateUserAsync_WhenValid_CreatesAndReturnsUser()
+    {
+        var db = CreateInMemoryDb();
+        var dto = new CreateUserDto { Name = "Alice", Email = "alice@example.com", Password = "password123", Role = UserRole.Admin };
 
-         var result = await new UserService(db).CreateUserAsync(dto);
+        var result = await new UserService(db).CreateUserAsync(dto);
 
-         Assert.Equal(dto.Name, result.Name);
-         Assert.Equal(dto.Email, result.Email);
-     }
+        Assert.Equal(dto.Name, result.Name);
+        Assert.Equal(dto.Email, result.Email);
+    }
 
-     [Fact]
-     public async Task CreateUserAsync_WhenEmailExists_ThrowsEmailAlreadyExistsException()
-     {
-         var db = CreateInMemoryDb();
-         db.Users.Add(CreateUser(email: "alice@example.com"));
-         await db.SaveChangesAsync();
+    [Fact]
+    public async Task CreateUserAsync_WhenEmailExists_ThrowsEmailAlreadyExistsException()
+    {
+        var db = CreateInMemoryDb();
+        db.Users.Add(CreateUser(email: "alice@example.com"));
+        await db.SaveChangesAsync();
 
-         var dto = new CreateUserDto { Name = "Alice2", Email = "alice@example.com", Password = "password123", Role = UserRole.Admin };
-         await Assert.ThrowsAsync<EmailAlreadyExistsException>(() => new UserService(db).CreateUserAsync(dto));
-     }
+        var dto = new CreateUserDto { Name = "Alice2", Email = "alice@example.com", Password = "password123", Role = UserRole.Admin };
+        await Assert.ThrowsAsync<EmailAlreadyExistsException>(() => new UserService(db).CreateUserAsync(dto));
+    }
 
-      [Fact]
-      public async Task UpdateUserAsync_WhenValid_UpdatesAndReturnsUser()
-      {
-          var db = CreateInMemoryDb();
-          var user = CreateUser();
-          db.Users.Add(user);
-          await db.SaveChangesAsync();
+    [Fact]
+    public async Task UpdateUserAsync_WhenValid_UpdatesAndReturnsUser()
+    {
+        var db = CreateInMemoryDb();
+        var user = CreateUser();
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
 
-          var dto = new UpdateUserDto { Name = "Alice Updated", Email = "alice2@example.com" };
-          var result = await new UserService(db).UpdateUserAsync(user.UserId, dto);
+        var dto = new UpdateUserDto { Name = "Alice Updated", Email = "alice2@example.com" };
+        var result = await new UserService(db).UpdateUserAsync(user.UserId, dto);
 
-          Assert.Equal("Alice Updated", result.Name);
-          Assert.Equal("alice2@example.com", result.Email);
-      }
+        Assert.Equal("Alice Updated", result.Name);
+        Assert.Equal("alice2@example.com", result.Email);
+    }
 
-      [Fact]
-      public async Task UpdateUserAsync_WhenNotFound_ThrowsKeyNotFoundException()
-      {
-          var db = CreateInMemoryDb();
-          var dto = new UpdateUserDto { Name = "X", Email = "x@example.com" };
-          await Assert.ThrowsAsync<KeyNotFoundException>(() => new UserService(db).UpdateUserAsync(Guid.NewGuid(), dto));
-      }
+    [Fact]
+    public async Task UpdateUserAsync_WhenNotFound_ThrowsKeyNotFoundException()
+    {
+        var db = CreateInMemoryDb();
+        var dto = new UpdateUserDto { Name = "X", Email = "x@example.com" };
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => new UserService(db).UpdateUserAsync(Guid.NewGuid(), dto));
+    }
 
-      [Fact]
-      public async Task UpdateUserAsync_WhenEmailInUse_ThrowsEmailAlreadyExistsException()
-      {
-          var db = CreateInMemoryDb();
-          db.Users.Add(CreateUser("Alice", "alice@example.com"));
-          var user2 = CreateUser("Bob", "bob@example.com");
-          db.Users.Add(user2);
-          await db.SaveChangesAsync();
+    [Fact]
+    public async Task UpdateUserAsync_WhenEmailInUse_ThrowsEmailAlreadyExistsException()
+    {
+        var db = CreateInMemoryDb();
+        db.Users.Add(CreateUser("Alice", "alice@example.com"));
+        var user2 = CreateUser("Bob", "bob@example.com");
+        db.Users.Add(user2);
+        await db.SaveChangesAsync();
 
-          var dto = new UpdateUserDto { Name = "Bob", Email = "alice@example.com" };
-          await Assert.ThrowsAsync<EmailAlreadyExistsException>(() => new UserService(db).UpdateUserAsync(user2.UserId, dto));
-      }
+        var dto = new UpdateUserDto { Name = "Bob", Email = "alice@example.com" };
+        await Assert.ThrowsAsync<EmailAlreadyExistsException>(() => new UserService(db).UpdateUserAsync(user2.UserId, dto));
+    }
 
     [Fact]
     public async Task DeleteUserAsync_WhenUserExists_DeletesUser()

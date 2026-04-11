@@ -42,37 +42,37 @@ public class UsersControllerTests
         await userService.Received(1).GetUserAsync(userId);
     }
 
-     [Fact]
-     public async Task UpdateUser_WhenServiceThrowsKeyNotFoundException_ReturnsNotFound()
-     {
-         var userId = Guid.NewGuid();
-         var dto = new UpdateUserDto { Name = "Bob", Email = "bob@example.com" };
+    [Fact]
+    public async Task UpdateUser_WhenServiceThrowsKeyNotFoundException_ReturnsNotFound()
+    {
+        var userId = Guid.NewGuid();
+        var dto = new UpdateUserDto { Name = "Bob", Email = "bob@example.com" };
 
-         var userService = Substitute.For<IUserService>();
-         userService.UpdateUserAsync(userId, Arg.Any<UpdateUserDto>())
-             .Returns(Task.FromException<UserDto>(new KeyNotFoundException("not found")));
+        var userService = Substitute.For<IUserService>();
+        userService.UpdateUserAsync(userId, Arg.Any<UpdateUserDto>())
+            .Returns(Task.FromException<UserDto>(new KeyNotFoundException("not found")));
 
-         var controller = new UsersController(userService);
-         var result = await controller.UpdateUser(userId, dto);
+        var controller = new UsersController(userService);
+        var result = await controller.UpdateUser(userId, dto);
 
-         Assert.IsType<NotFoundResult>(result);
-     }
+        Assert.IsType<NotFoundResult>(result);
+    }
 
-     [Fact]
-     public async Task UpdateUser_WhenServiceSucceeds_ReturnsOk()
-     {
-         var userId = Guid.NewGuid();
-         var dto = new UpdateUserDto { Name = "Carol", Email = "carol@example.com" };
+    [Fact]
+    public async Task UpdateUser_WhenServiceSucceeds_ReturnsOk()
+    {
+        var userId = Guid.NewGuid();
+        var dto = new UpdateUserDto { Name = "Carol", Email = "carol@example.com" };
 
-         var userService = Substitute.For<IUserService>();
-         userService.UpdateUserAsync(userId, Arg.Any<UpdateUserDto>())
-             .Returns(Task.FromResult(new UserDto { UserId = userId, Name = dto.Name ?? "existing", Email = dto.Email ?? "existing@email.com", Role = UserRole.Admin }));
+        var userService = Substitute.For<IUserService>();
+        userService.UpdateUserAsync(userId, Arg.Any<UpdateUserDto>())
+            .Returns(Task.FromResult(new UserDto { UserId = userId, Name = dto.Name ?? "existing", Email = dto.Email ?? "existing@email.com", Role = UserRole.Admin }));
 
-         var controller = new UsersController(userService);
-         var result = await controller.UpdateUser(userId, dto);
+        var controller = new UsersController(userService);
+        var result = await controller.UpdateUser(userId, dto);
 
-         Assert.IsType<OkObjectResult>(result);
-     }
+        Assert.IsType<OkObjectResult>(result);
+    }
 
     [Fact]
     public async Task GetAllUsers_WhenServiceReturnsUsers_ReturnsOkWithList()

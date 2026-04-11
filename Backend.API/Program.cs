@@ -47,8 +47,8 @@ if (builder.Environment.IsDevelopment())
     });
 }
 
-builder.Services.AddDbContext<AppDbContext>(options => 
-    options.UseNpgsql(connectionString, o => 
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(connectionString, o =>
         o.MapEnum<UserRole>("user_role", "public")
     )
     .UseSnakeCaseNamingConvention()
