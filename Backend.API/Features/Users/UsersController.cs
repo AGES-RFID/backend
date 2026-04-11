@@ -15,6 +15,20 @@ public class UsersController(IUserService userService) : ControllerBase
         return Ok(users);
     }
 
+    [HttpGet("by-name/{name}")]
+    public async Task<ActionResult<UserDto>> GetUserByName(string name)
+    {
+        try
+        {
+            var user = await _userService.GetUserByNameAsync(name);
+            return Ok(user);
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+    }
+
     [HttpGet("{userId}")]
     public async Task<ActionResult<UserDto>> GetUser(Guid userId)
     {
@@ -32,20 +46,36 @@ public class UsersController(IUserService userService) : ControllerBase
     [HttpPost]
     public async Task<ActionResult<UserDto>> CreateUser(CreateUserDto dto)
     {
-        var user = await _userService.CreateUserAsync(dto);
-        return CreatedAtAction(nameof(GetUser), new { userId = user.UserId }, user);
+        try
+        {
+            var user = await _userService.CreateUserAsync(dto);
+            return CreatedAtAction(nameof(GetUser), new { userId = user.UserId }, user);
+        }
+        catch (EmailAlreadyExistsException)
+        {
+            return Conflict(new { error = "Endereço de email já está em uso" });
+        }
+        catch (UserCreationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
     }
 
     // Atenção aos verbos HTTP!   https://medium.com/@gabrielrufino.js/put-vs-patch-pare-de-agora-escolher-errado-533b8c6058d9
     // PUT -> Atualiza TODOS os campos da entidade
     // PATCH -> Atualização partical da entidade (ex: apenas o nome ou email)
-    [HttpPut("{userId}")]
-    public async Task<IActionResult> UpdateUser(Guid userId, CreateUserDto dto)
+    [HttpPatch("{userId}")]
+    public async Task<IActionResult> UpdateUser(Guid userId, UpdateUserDto dto)
     {
         try
         {
-            await _userService.UpdateUserAsync(userId, dto);
-            return NoContent();
+            var updateUser = await _userService.UpdateUserAsync(userId, dto);
+            return Ok(updateUser);
+        }
+
+        catch (EmailAlreadyExistsException)
+        {
+            return Conflict(new { error = "Endereço de email já está em uso" });
         }
         catch (KeyNotFoundException)
         {
