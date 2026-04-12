@@ -1,9 +1,11 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Backend.Configuration;
 using Backend.Database;
 using Backend.Features.Users;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
 namespace Backend.Features.Auth;
@@ -18,10 +20,10 @@ public interface IAuthService
     Task<AuthResponse> LoginAsync(LoginDto dto);
 }
 
-public class AuthService(AppDbContext db, IConfiguration config) : IAuthService
+public class AuthService(AppDbContext db, IOptions<JwtSettings> jwtSettings) : IAuthService
 {
     private readonly AppDbContext _db = db;
-    private readonly IConfiguration _config = config;
+    private readonly JwtSettings _jwtSettings = jwtSettings.Value;
 
     public async Task<AuthResponse> LoginAsync(LoginDto dto)
     {
@@ -46,12 +48,10 @@ public class AuthService(AppDbContext db, IConfiguration config) : IAuthService
 
     private string GenerateJwtToken(User user)
     {
-        var jwtSettings = _config.GetSection("Jwt");
-        var secretKey = jwtSettings["SecretKey"]
-            ?? throw new InvalidOperationException("JWT SecretKey not configured");
-        var issuer = jwtSettings["Issuer"];
-        var audience = jwtSettings["Audience"];
-        var expiryMinutes = int.Parse(jwtSettings["ExpiryMinutes"] ?? "180");
+        var secretKey = _jwtSettings.SecretKey;
+        var issuer = _jwtSettings.Issuer;
+        var audience = _jwtSettings.Audience;
+        var expiryMinutes = _jwtSettings.ExpiryMinutes;
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
