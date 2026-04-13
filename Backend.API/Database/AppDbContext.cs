@@ -1,4 +1,5 @@
 using System.Reflection;
+using Backend.Features.Tags;
 using Backend.Features.Users;
 using Backend.Features.Vehicles;
 using Microsoft.EntityFrameworkCore;
@@ -9,6 +10,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 {
     public DbSet<User> Users { get; set; }
     public DbSet<Vehicle> Vehicles { get; set; }
+    public DbSet<Tag> Tags { get; set; }
+
     public override int SaveChanges()
     {
         ApplyTimestamps();

@@ -70,7 +70,6 @@ public class UserService(AppDbContext db) : IUserService
         });
 
         await _db.SaveChangesAsync();
-
         return UserDto.FromModel(user.Entity);
     }
 
