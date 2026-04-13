@@ -8,9 +8,6 @@ public class TagController(ITagService tagService) : ControllerBase
 {
     private readonly ITagService _tagService = tagService;
 
-    /// <summary>
-    /// POST /tags - Create a new RFID tag
-    /// </summary>
     [HttpPost]
     public async Task<ActionResult<TagDto>> CreateTag([FromBody] CreateTagDto dto)
     {
@@ -35,9 +32,6 @@ public class TagController(ITagService tagService) : ControllerBase
         }
     }
 
-    /// <summary>
-    /// GET /tags - Get all RFID tags with optional status filter
-    /// </summary>
     [HttpGet]
     public async Task<ActionResult<IEnumerable<TagListDto>>> GetAllTags([FromQuery] string? status)
     {
@@ -56,9 +50,6 @@ public class TagController(ITagService tagService) : ControllerBase
         }
     }
 
-    /// <summary>
-    /// PATCH /tags/{tagId}/deactivate - Deactivate an RFID tag
-    /// </summary>
     [HttpPatch("{tagId}/deactivate")]
     public async Task<ActionResult<TagDto>> DeactivateTag(string tagId)
     {
@@ -81,9 +72,6 @@ public class TagController(ITagService tagService) : ControllerBase
         }
     }
 
-    /// <summary>
-    /// PATCH /tags/{tagId}/assign-vehicle - Assign an RFID tag to a vehicle
-    /// </summary>
     [HttpPatch("{tagId}/assign-vehicle")]
     public async Task<ActionResult<TagDto>> AssignVehicle(string tagId, [FromBody] AssignVehicleDto dto)
     {

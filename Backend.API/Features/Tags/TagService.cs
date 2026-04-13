@@ -60,8 +60,8 @@ public class TagService(AppDbContext db) : ITagService
             .Select(t => new TagListDto
             {
                 Id = t.TagId,
-                UserName = t.Vehicle != null ? t.Vehicle.User.Name : null,
-                Plate = t.Vehicle != null ? t.Vehicle.LicensePlate : null,
+                UserName = t.Vehicle != null ? t.Vehicle.User!.Name : null,
+                Plate = t.Vehicle != null ? t.Vehicle.Plate : null,
                 Status = t.Status.ToString()
             })
             .ToListAsync();
@@ -71,12 +71,20 @@ public class TagService(AppDbContext db) : ITagService
 
     public async Task<TagDto> DeactivateTagAsync(string tagId)
     {
-        var tag = await _db.Tags.FirstOrDefaultAsync(t => t.TagId == tagId)
+        var tag = await _db.Tags
+            .Include(t => t.Vehicle)
+            .FirstOrDefaultAsync(t => t.TagId == tagId)
             ?? throw new KeyNotFoundException($"Tag with id {tagId} not found");
 
         if (tag.Status == TagStatus.INACTIVE)
         {
             throw new TagConflictException($"Tag is already inactive");
+        }
+
+        if (tag.Vehicle != null)
+        {
+            tag.Vehicle.TagId = null;
+            tag.Vehicle = null;
         }
 
         tag.Status = TagStatus.INACTIVE;
@@ -97,7 +105,7 @@ public class TagService(AppDbContext db) : ITagService
             ?? throw new KeyNotFoundException($"Vehicle with id {dto.VehicleId} not found");  
 
         // Check if tag is already assigned
-        if (tag.VehicleId.HasValue || tag.Status == TagStatus.IN_USE)
+        if (tag.Status == TagStatus.IN_USE)
         {
             throw new TagConflictException($"Tag is already assigned to a vehicle");
         }
@@ -108,15 +116,14 @@ public class TagService(AppDbContext db) : ITagService
             throw new TagConflictException($"Cannot assign an inactive tag to a vehicle");
         }
 
-        // Check if vehicle already has an active tag
-        var existingActiveTag = await _db.Tags
-            .FirstOrDefaultAsync(t => t.VehicleId == dto.VehicleId && t.Status == TagStatus.IN_USE);
-        if (existingActiveTag != null)
+        // Check if vehicle already has a tag assigned
+        if (!string.IsNullOrWhiteSpace(vehicle.TagId))
         {
             throw new TagConflictException($"Vehicle already has a tag assigned");
         }
 
-        tag.VehicleId = dto.VehicleId;
+        vehicle.TagId = tag.TagId;
+        tag.Vehicle = vehicle;
         tag.Status = TagStatus.IN_USE;
         tag.UpdatedAt = DateTime.UtcNow;
 

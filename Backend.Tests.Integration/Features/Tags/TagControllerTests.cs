@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using Backend.Database;
 using Backend.Features.Tags;
 using Backend.Features.Users;
+using Vehicle = Backend.Features.Vehicles.Vehicle;
 using Microsoft.Extensions.DependencyInjection;
 using tests.Setup;
 
@@ -39,6 +40,12 @@ public class TagControllerTests(CustomWebApplicationFactory factory) : IClassFix
     {
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        if (tag.Vehicle != null)
+        {
+            db.Attach(tag.Vehicle);
+        }
+
         db.Tags.Add(tag);
         await db.SaveChangesAsync();
     }
@@ -147,14 +154,14 @@ public class TagControllerTests(CustomWebApplicationFactory factory) : IClassFix
     [Fact]
     public async Task AssignVehicle_ShouldAssignVehicleToTag()
     {
-        var user = new User { Name = "Alice", Email = "alice@example.com" };
+        var user = new User { Name = "Alice", Email = "alice@example.com", PasswordHash = "hash", Role = UserRole.Admin };
         await SeedUserAsync(user);
 
         var vehicle = new Vehicle
         {
-            LicensePlate = "ABC1D23",
-            Model = "Car",
-            Color = "Blue",
+            Plate = "ABC1D23",
+            Brand = "Honda",
+            Model = "HRV",
             UserId = user.UserId
         };
         await SeedVehicleAsync(vehicle);
@@ -176,14 +183,14 @@ public class TagControllerTests(CustomWebApplicationFactory factory) : IClassFix
     [Fact]
     public async Task AssignVehicle_ShouldReturnConflict_WhenVehicleAlreadyHasActiveTag()
     {
-        var user = new User { Name = "Bob", Email = "bob@example.com" };
+        var user = new User { Name = "Bob", Email = "bob@example.com", PasswordHash = "hash", Role = UserRole.Admin };
         await SeedUserAsync(user);
 
         var vehicle = new Vehicle
         {
-            LicensePlate = "XYZ9Z99",
-            Model = "SUV",
-            Color = "Red",
+            Plate = "XYZ9Z99",
+            Brand = "Toyota",
+            Model = "Corolla",
             UserId = user.UserId
         };
         await SeedVehicleAsync(vehicle);
@@ -205,14 +212,14 @@ public class TagControllerTests(CustomWebApplicationFactory factory) : IClassFix
     [Fact]
     public async Task AssignVehicle_ShouldReturnConflict_WhenTagIsAlreadyAssigned()
     {
-        var user = new User { Name = "Carol", Email = "carol@example.com" };
+        var user = new User { Name = "Carol", Email = "carol@example.com", PasswordHash = "hash", Role = UserRole.Admin };
         await SeedUserAsync(user);
 
         var vehicle = new Vehicle
         {
-            LicensePlate = "CAR1L23",
-            Model = "Hatch",
-            Color = "Green",
+            Plate = "CAR1L23",
+            Brand = "Ford",
+            Model = "Fiesta",
             UserId = user.UserId
         };
         await SeedVehicleAsync(vehicle);
@@ -222,7 +229,7 @@ public class TagControllerTests(CustomWebApplicationFactory factory) : IClassFix
         {
             TagId = tagId,
             Status = Backend.Features.Tags.Enums.TagStatus.IN_USE,
-            VehicleId = vehicle.VehicleId
+            Vehicle = vehicle
         });
 
         var response = await _client.PatchAsJsonAsync($"/api/tags/{tagId}/assign-vehicle", new AssignVehicleDto { VehicleId = vehicle.VehicleId });
@@ -233,14 +240,14 @@ public class TagControllerTests(CustomWebApplicationFactory factory) : IClassFix
     [Fact]
     public async Task AssignVehicle_ShouldReturnConflict_WhenTagIsInactive()
     {
-        var user = new User { Name = "Dana", Email = "dana@example.com" };
+        var user = new User { Name = "Dana", Email = "dana@example.com", PasswordHash = "hash", Role = UserRole.Admin };
         await SeedUserAsync(user);
 
         var vehicle = new Vehicle
         {
-            LicensePlate = "DAN2A34",
-            Model = "Sedan",
-            Color = "Black",
+            Plate = "DAN2A34",
+            Brand = "Chevrolet",
+            Model = "Onix",
             UserId = user.UserId
         };
         await SeedVehicleAsync(vehicle);
@@ -260,14 +267,14 @@ public class TagControllerTests(CustomWebApplicationFactory factory) : IClassFix
     [Fact]
     public async Task AssignVehicle_ShouldReturnNotFound_WhenTagDoesNotExist()
     {
-        var user = new User { Name = "Eva", Email = "eva@example.com" };
+        var user = new User { Name = "Eva", Email = "eva@example.com", PasswordHash = "hash", Role = UserRole.Admin };
         await SeedUserAsync(user);
 
         var vehicle = new Vehicle
         {
-            LicensePlate = "EVA3A45",
-            Model = "SUV",
-            Color = "White",
+            Plate = "EVA3A45",
+            Brand = "Volkswagen",
+            Model = "T-Cross",
             UserId = user.UserId
         };
         await SeedVehicleAsync(vehicle);

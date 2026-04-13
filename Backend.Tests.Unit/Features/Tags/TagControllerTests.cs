@@ -19,7 +19,7 @@ public class TagControllerTests
 
         var result = await controller.CreateTag(dto);
 
-        var created = Assert.IsType<ObjectResult>(result.Result);
+        var created = Assert.IsType<CreatedAtActionResult>(result.Result);
         Assert.Equal(201, created.StatusCode);
 
         var dtoResult = Assert.IsType<TagDto>(created.Value);
@@ -53,7 +53,7 @@ public class TagControllerTests
 
         var result = await controller.CreateTag(new CreateTagDto { TagId = "TAG-001" });
 
-        var conflict = Assert.IsType<ObjectResult>(result.Result);
+        var conflict = Assert.IsType<ConflictObjectResult>(result.Result);
         Assert.Equal(409, conflict.StatusCode);
     }
 
@@ -212,7 +212,7 @@ public class TagControllerTests
 
         var result = await controller.DeactivateTag("TAG-001");
 
-        var conflict = Assert.IsType<ObjectResult>(result.Result);
+        var conflict = Assert.IsType<ConflictObjectResult>(result.Result);
         Assert.Equal(409, conflict.StatusCode);
     }
 
@@ -294,7 +294,7 @@ public class TagControllerTests
 
         var result = await controller.AssignVehicle("TAG-001", new AssignVehicleDto { VehicleId = Guid.NewGuid() });
 
-        var conflict = Assert.IsType<ObjectResult>(result.Result);
+        var conflict = Assert.IsType<ConflictObjectResult>(result.Result);
         Assert.Equal(409, conflict.StatusCode);
     }
 

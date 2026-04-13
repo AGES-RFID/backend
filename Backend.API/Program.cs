@@ -1,11 +1,10 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Microsoft.EntityFrameworkCore;
-
-using Backend.Features.Users;
-using Backend.Features.Tags;
 using Backend.Database;
+using Backend.Features.Tags;
+using Backend.Features.Users;
 using Backend.Features.Vehicles;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -58,11 +57,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 // Register feature services
 builder.Services.AddScoped<IUserService, UserService>();
-<<<<<<< HEAD
 builder.Services.AddScoped<IVehicleService, VehicleService>();
-=======
 builder.Services.AddScoped<ITagService, TagService>();
->>>>>>> b691c44 (feat: all tag routes implemented)
 
 var app = builder.Build();
 

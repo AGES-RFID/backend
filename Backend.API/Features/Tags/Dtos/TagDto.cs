@@ -10,6 +10,6 @@ public class TagDto
     {
         TagId = tag.TagId,
         Status = tag.Status.ToString(),
-        VehicleId = tag.VehicleId,
+        VehicleId = tag.Vehicle?.VehicleId,
     };
 }

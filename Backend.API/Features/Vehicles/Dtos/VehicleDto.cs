@@ -4,6 +4,7 @@ public class VehicleDto
 {
     public required Guid UserId { get; init; }
     public required Guid VehicleId { get; init; }
+    public string? TagId { get; init; }
     public required string Plate { get; init; }
     public required string Brand { get; init; }
     public required string Model { get; init; }
@@ -14,6 +15,7 @@ public class VehicleDto
     {
         UserId = vehicle.UserId,
         VehicleId = vehicle.VehicleId,
+        TagId = vehicle.TagId,
         Plate = vehicle.Plate,
         Brand = vehicle.Brand,
         Model = vehicle.Model,
