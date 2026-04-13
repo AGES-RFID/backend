@@ -9,6 +9,7 @@ public interface IVehicleService
     Task<VehicleDto> CreateVehicleAsync(CreateVehicleDto dto);
     Task<VehicleDto> UpdateVehicleAsync(Guid id, CreateVehicleDto dto);
     Task DeleteVehicleAsync(Guid id);
+    Task<VehicleSearchResponseDto> GetVehicleByPlateAsync(string plate);
 }
 
 public class VehicleService(AppDbContext db) : IVehicleService
@@ -55,6 +56,22 @@ public class VehicleService(AppDbContext db) : IVehicleService
             ?? throw new KeyNotFoundException($"Vehicle with id {vehicleId} not found");
 
         return VehicleDto.FromModel(vehicle);
+    }
+
+    public async Task<VehicleSearchResponseDto> GetVehicleByPlateAsync(string plate)
+    {
+        var vehicle = await _db.Vehicles
+            .Include(v => v.User)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(v => v.Plate == plate)
+            ?? throw new KeyNotFoundException("Veículo não encontrado.");
+
+        return new VehicleSearchResponseDto
+        {
+            VehicleId = vehicle.VehicleId,
+            OwnerName = vehicle.User!.Name,
+            Plate = vehicle.Plate
+        };
     }
 
     public async Task<VehicleDto> UpdateVehicleAsync(Guid id, CreateVehicleDto dto)
