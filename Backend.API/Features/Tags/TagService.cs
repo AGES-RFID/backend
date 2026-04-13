@@ -97,7 +97,7 @@ public class TagService(AppDbContext db) : ITagService
             ?? throw new KeyNotFoundException($"Vehicle with id {dto.VehicleId} not found");  
 
         // Check if tag is already assigned
-        if (tag.Status == TagStatus.IN_USE  && tag.Vehicle != null)
+        if (tag.VehicleId.HasValue || tag.Status == TagStatus.IN_USE)
         {
             throw new TagConflictException($"Tag is already assigned to a vehicle");
         }
@@ -109,7 +109,9 @@ public class TagService(AppDbContext db) : ITagService
         }
 
         // Check if vehicle already has an active tag
-        if (vehicle.TagId != null)
+        var existingActiveTag = await _db.Tags
+            .FirstOrDefaultAsync(t => t.VehicleId == dto.VehicleId && t.Status == TagStatus.IN_USE);
+        if (existingActiveTag != null)
         {
             throw new TagConflictException($"Vehicle already has a tag assigned");
         }

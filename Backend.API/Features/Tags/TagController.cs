@@ -17,30 +17,21 @@ public class TagController(ITagService tagService) : ControllerBase
         // Validate payload
         if (!ModelState.IsValid)
         {
-            return BadRequest(new
-            {
-                message = "Invalid request payload"
-            });
+            return BadRequest("Invalid request payload");
         }
 
         try
         {
             var tag = await _tagService.CreateTagAsync(dto);
-            return StatusCode(StatusCodes.Status201Created, tag);
+            return CreatedAtAction(nameof(GetAllTags), new { tagId = tag.TagId }, tag);
         }
         catch (TagConflictException ex)
         {
-            return StatusCode(StatusCodes.Status409Conflict, new
-            {
-                message = ex.Message
-            });
+            return Conflict(ex.Message);
         }
         catch (Exception)
         {
-            return StatusCode(StatusCodes.Status500InternalServerError, new
-            {
-                message = "An unexpected error occurred while creating the tag"
-            });
+            return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred while creating the tag");
         }
     }
 
@@ -57,17 +48,11 @@ public class TagController(ITagService tagService) : ControllerBase
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new
-            {
-                message = ex.Message
-            });
+            return BadRequest(ex.Message);
         }
         catch (Exception)
         {
-            return StatusCode(StatusCodes.Status500InternalServerError, new
-            {
-                message = "An unexpected error occurred while retrieving tags"
-            });
+            return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred while retrieving tags");
         }
     }
 
@@ -84,24 +69,15 @@ public class TagController(ITagService tagService) : ControllerBase
         }
         catch (KeyNotFoundException)
         {
-            return NotFound(new
-            {
-                message = $"Tag with id {tagId} not found"
-            });
+            return NotFound($"Tag with id {tagId} not found");
         }
         catch (TagConflictException ex)
         {
-            return StatusCode(StatusCodes.Status409Conflict, new
-            {
-                message = ex.Message
-            });
+            return Conflict(ex.Message);
         }
         catch (Exception)
         {
-            return StatusCode(StatusCodes.Status500InternalServerError, new
-            {
-                message = "An unexpected error occurred while deactivating the tag"
-            });
+            return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred while deactivating the tag");
         }
     }
 
@@ -114,10 +90,7 @@ public class TagController(ITagService tagService) : ControllerBase
         // Validate payload
         if (!ModelState.IsValid)
         {
-            return BadRequest(new
-            {
-                message = "Invalid request payload"
-            });
+            return BadRequest("Invalid request payload");
         }
 
         try
@@ -127,24 +100,15 @@ public class TagController(ITagService tagService) : ControllerBase
         }
         catch (KeyNotFoundException ex)
         {
-            return NotFound(new
-            {
-                message = ex.Message
-            });
+            return NotFound(ex.Message);
         }
         catch (TagConflictException ex)
         {
-            return StatusCode(StatusCodes.Status409Conflict, new
-            {
-                message = ex.Message
-            });
+            return Conflict(ex.Message);
         }
         catch (Exception)
         {
-            return StatusCode(StatusCodes.Status500InternalServerError, new
-            {
-                message = "An unexpected error occurred while assigning the vehicle"
-            });
+            return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred while assigning the vehicle");
         }
     }
 }
