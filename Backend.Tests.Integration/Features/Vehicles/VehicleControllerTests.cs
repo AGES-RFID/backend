@@ -133,6 +133,40 @@ public class VehicleControllerTests(CustomWebApplicationFactory factory) : IClas
     }
 
     [Fact]
+    public async Task UpdateVehicle_WithNewOwner_UpdatesUserId()
+    {
+        var firstOwner = await SeedUserAsync();
+        var secondOwner = await SeedUserAsync();
+
+        var createPayload = new CreateVehicleDto
+        {
+            Brand = "Honda",
+            Model = "HRV",
+            Plate = "OWN0001",
+            UserId = firstOwner.UserId
+        };
+
+        var createResponse = await _client.PostAsync("/api/vehicles", JsonContent.Create(createPayload));
+        var created = await createResponse.Content.ReadFromJsonAsync<VehicleDto>();
+
+        var updatePayload = new CreateVehicleDto
+        {
+            Brand = "Honda",
+            Model = "HRV",
+            Plate = "OWN0001",
+            UserId = secondOwner.UserId
+        };
+
+        var updateResponse = await _client.PutAsync($"/api/vehicles/{created!.VehicleId}", JsonContent.Create(updatePayload));
+
+        updateResponse.EnsureSuccessStatusCode();
+        var updated = await updateResponse.Content.ReadFromJsonAsync<VehicleDto>();
+
+        Assert.NotNull(updated);
+        Assert.Equal(secondOwner.UserId, updated.UserId);
+    }
+
+    [Fact]
     public async Task GetVehicleById_WithExistingId_ReturnsOk()
     {
         var user = await SeedUserAsync();
