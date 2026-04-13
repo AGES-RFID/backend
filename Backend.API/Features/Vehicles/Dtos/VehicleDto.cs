@@ -2,14 +2,13 @@ namespace Backend.Features.Vehicles;
 
 public class VehicleDto
 {
-    public Guid UserId { get; set; }
-    public Guid VehicleId { get; set; } = Guid.NewGuid();
-    public required string Plate { get; set; }
-    public required string Brand { get; set; }
-    public required string Model { get; set; }
-    public DateTime CreatedAt { get; set; }
-    public DateTime UpdatedAt { get; set; }
-
+    public required Guid UserId { get; init; }
+    public required Guid VehicleId { get; init; }
+    public required string Plate { get; init; }
+    public required string Brand { get; init; }
+    public required string Model { get; init; }
+    public DateTime CreatedAt { get; init; }
+    public DateTime UpdatedAt { get; init; }
 
     public static VehicleDto FromModel(Vehicle vehicle) => new()
     {

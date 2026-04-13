@@ -8,9 +8,63 @@ namespace Backend.Tests.Unit.Features.Vehicles;
 public class VehicleControllerTests
 {
     [Fact]
+    public async Task CreateVehicle_WhenSuccess_ReturnsCreatedAtAction()
+    {
+        var dto = new CreateVehicleDto { Plate = "AAA9A99", Brand = "Honda", Model = "HRV", UserId = Guid.NewGuid() };
+        var expected = new VehicleDto { VehicleId = Guid.NewGuid(), Plate = dto.Plate, Brand = dto.Brand, Model = dto.Model, UserId = dto.UserId };
+
+        var vehicleService = Substitute.For<IVehicleService>();
+        vehicleService.CreateVehicleAsync(dto).Returns(expected);
+
+        var controller = new VehiclesController(vehicleService);
+
+        var result = await controller.CreateVehicle(dto);
+
+        var createdAtResult = Assert.IsType<CreatedAtActionResult>(result.Result);
+        Assert.Equal(nameof(controller.GetVehicle), createdAtResult.ActionName);
+
+        var returnedDto = Assert.IsType<VehicleDto>(createdAtResult.Value);
+        Assert.Equal(expected.VehicleId, returnedDto.VehicleId);
+    }
+
+    [Fact]
+    public async Task CreateVehicle_WhenServiceThrowsInvalidOperationException_ReturnsConflict()
+    {
+        var dto = new CreateVehicleDto { Plate = "AAA9A99", Brand = "Honda", Model = "HRV", UserId = Guid.NewGuid() };
+
+        var vehicleService = Substitute.For<IVehicleService>();
+        vehicleService.CreateVehicleAsync(dto).Returns(Task.FromException<VehicleDto>(new InvalidOperationException()));
+
+        var controller = new VehiclesController(vehicleService);
+
+        var result = await controller.CreateVehicle(dto);
+
+        Assert.IsType<ConflictResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task GetAllVehicles_WhenCalled_ReturnsOkWithList()
+    {
+        var expectedList = new List<VehicleDto>
+        {
+            new VehicleDto { VehicleId = Guid.NewGuid(), Plate = "AAA0000", Brand = "Honda", Model = "Civic", UserId = Guid.NewGuid() }
+        };
+
+        var vehicleService = Substitute.For<IVehicleService>();
+        vehicleService.GetAllVehiclesAsync().Returns(expectedList);
+
+        var controller = new VehiclesController(vehicleService);
+
+        var result = await controller.GetAllVehicles();
+
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        var actualList = Assert.IsAssignableFrom<IEnumerable<VehicleDto>>(okResult.Value);
+        Assert.Single(actualList);
+    }
+
+    [Fact]
     public async Task GetVehicle_WhenServiceThrowsBadHttpRequest_ReturnsBadRequest()
     {
-        // Arrange
         var VehicleId = Guid.NewGuid();
 
         var vehicleService = Substitute.For<IVehicleService>();
@@ -19,19 +73,15 @@ public class VehicleControllerTests
 
         var controller = new VehiclesController(vehicleService);
 
-        // Act
         var result = await controller.GetVehicle(VehicleId);
 
-        // Assert
         Assert.IsType<BadRequestResult>(result.Result);
         await vehicleService.Received(1).GetVehicleAsync(VehicleId);
     }
 
-
     [Fact]
     public async Task GetVehicle_WhenServiceThrowsKeyNotFoundException_ReturnsNotFound()
     {
-        // Arrange
         var VehicleId = Guid.NewGuid();
 
         var vehicleService = Substitute.For<IVehicleService>();
@@ -40,22 +90,21 @@ public class VehicleControllerTests
 
         var controller = new VehiclesController(vehicleService);
 
-        // Act
         var result = await controller.GetVehicle(VehicleId);
 
-        // Assert
         Assert.IsType<NotFoundResult>(result.Result);
         await vehicleService.Received(1).GetVehicleAsync(VehicleId);
     }
+
     [Fact]
     public async Task GetVehicle_WhenServiceReturnsVehicle_ReturnsOkWithVehicle()
     {
-        // Given
         var vehicleId = Guid.NewGuid();
 
         var expected = new VehicleDto
         {
             VehicleId = vehicleId,
+            UserId = Guid.NewGuid(),
             Plate = "AAA9A99",
             Model = "HRV",
             Brand = "Honda"
@@ -66,9 +115,7 @@ public class VehicleControllerTests
 
         var controller = new VehiclesController(vehicleService);
 
-        // When
         var result = await controller.GetVehicle(vehicleId);
-        // Then
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         var dto = Assert.IsType<VehicleDto>(ok.Value);
 
@@ -114,7 +161,14 @@ public class VehicleControllerTests
     {
         var vehicleId = Guid.NewGuid();
         var dto = new CreateVehicleDto { Plate = "AAA9A99", Brand = "Honda", Model = "HRV", UserId = Guid.NewGuid() };
-        var expected = new VehicleDto { VehicleId = vehicleId, Plate = dto.Plate, Brand = dto.Brand, Model = dto.Model };
+        var expected = new VehicleDto
+        {
+            VehicleId = vehicleId,
+            UserId = dto.UserId,
+            Plate = dto.Plate,
+            Brand = dto.Brand,
+            Model = dto.Model
+        };
 
         var vehicleService = Substitute.For<IVehicleService>();
         vehicleService.UpdateVehicleAsync(vehicleId, dto).Returns(expected);

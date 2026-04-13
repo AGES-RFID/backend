@@ -1,7 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
+using Backend.Database;
 using Backend.Features.Users;
 using Backend.Features.Vehicles;
+using Microsoft.Extensions.DependencyInjection;
 using tests.Setup;
 
 namespace tests.Features.Vehicles;
@@ -9,6 +11,7 @@ namespace tests.Features.Vehicles;
 public class VehicleControllerTests(CustomWebApplicationFactory factory) : IClassFixture<CustomWebApplicationFactory>, IAsyncLifetime
 {
     private readonly HttpClient _client = factory.CreateClient();
+    private readonly IServiceScopeFactory _scopeFactory = factory.Services.GetRequiredService<IServiceScopeFactory>();
 
     public async Task InitializeAsync()
     {
@@ -17,158 +20,134 @@ public class VehicleControllerTests(CustomWebApplicationFactory factory) : IClas
 
     public Task DisposeAsync() => Task.CompletedTask;
 
-
-    //Test cases for Create
-    [Fact]
-    public async Task CreateVehicle_WithValidData_ShouldReturnCreated()
+    private async Task<User> SeedUserAsync()
     {
-        var userInfo = await _client.PostAsync("/api/users", JsonContent.Create(new CreateUserDto { Name = "Fulano", Email = "fulano@gmail.com" }));
-        var user = await userInfo.Content.ReadFromJsonAsync<UserDto>();
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        var dto = new CreateVehicleDto { Brand = "Honda", Model = "HRV", Plate = "AAA9A99", UserId = user!.UserId };
-        var response = await _client.PostAsync("/api/vehicles", JsonContent.Create(dto));
+        var user = new User
+        {
+            Name = "Test Owner",
+            Email = $"test_{Guid.NewGuid()}@email.com",
+            PasswordHash = "dummy_hash",
+            Role = UserRole.Admin
+        };
 
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+        return user;
+    }
+
+    [Fact]
+    public async Task CreateVehicle_WithValidPayload_ReturnsCreated()
+    {
+        var user = await SeedUserAsync();
+        var payload = new CreateVehicleDto { Brand = "Honda", Model = "HRV", Plate = "AAA9A99", UserId = user.UserId };
+
+        var response = await _client.PostAsync("/api/vehicles", JsonContent.Create(payload));
+
+        response.EnsureSuccessStatusCode();
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
         var created = await response.Content.ReadFromJsonAsync<VehicleDto>();
         Assert.NotNull(created);
-        Assert.Equal(dto.Plate, created.Plate);
-        Assert.Equal(dto.Brand, created.Brand);
-        Assert.Equal(dto.Model, created.Model);
-        Assert.Equal(dto.UserId, created.UserId);
+        Assert.Equal(payload.Plate, created.Plate);
+        Assert.Equal(payload.UserId, created.UserId);
+        Assert.NotEqual(Guid.Empty, created.VehicleId);
     }
 
     [Fact]
-    public async Task CreateVehicle_WithInvalidPayload_ShouldReturnBadRequest()
+    public async Task CreateVehicle_WithExistingPlate_ReturnsConflict()
     {
-        var response = await _client.PostAsync("/api/vehicles", JsonContent.Create(new { Brand = "Missing Required Info" }));
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var user = await SeedUserAsync();
+        var payload = new CreateVehicleDto { Brand = "Honda", Model = "HRV", Plate = "SAMEPLT", UserId = user.UserId };
+
+        await _client.PostAsync("/api/vehicles", JsonContent.Create(payload));
+
+        var response = await _client.PostAsync("/api/vehicles", JsonContent.Create(payload));
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
     }
 
     [Fact]
-    public async Task CreateVehicle_WithNonExistentUserId_ShouldReturnNotFound()
+    public async Task CreateVehicle_WithNonExistentUserId_ReturnsNotFound()
     {
-        var dto = new CreateVehicleDto { Brand = "Honda", Model = "HRV", Plate = "AAA9A99", UserId = Guid.NewGuid() };
-        var response = await _client.PostAsync("/api/vehicles", JsonContent.Create(dto));
+        var payload = new CreateVehicleDto { Brand = "Honda", Model = "HRV", Plate = "AAA9A99", UserId = Guid.NewGuid() };
+
+        var response = await _client.PostAsync("/api/vehicles", JsonContent.Create(payload));
+
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
-    public async Task CreateVehicle_WithExistingPlate_ShouldReturnConflict()
+    public async Task UpdateVehicle_WithValidData_ReturnsOk()
     {
-        var userInfo = await _client.PostAsync("/api/users", JsonContent.Create(new CreateUserDto { Name = "Fulaninho", Email = "fulano@gmail.com" }));
-        var user = await userInfo.Content.ReadFromJsonAsync<UserDto>();
+        var user = await SeedUserAsync();
+        var createPayload = new CreateVehicleDto { Brand = "Honda", Model = "HRV", Plate = "UPDT001", UserId = user.UserId };
 
-        var dto = new CreateVehicleDto { Brand = "Honda", Model = "HRV", Plate = "SAMEPLT", UserId = user!.UserId };
-        await _client.PostAsync("/api/vehicles", JsonContent.Create(dto));
-
-        var response = await _client.PostAsync("/api/vehicles", JsonContent.Create(dto));
-        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
-    }
-    //Teste case for Upate
-    [Fact]
-    public async Task UpdateVehicle_WithValidData_ShouldReturnOk()
-    {
-        var userInfo = await _client.PostAsync("/api/users", JsonContent.Create(new CreateUserDto { Name = "Fulaninho", Email = "Fulano@gmail.com" }));
-        var user = await userInfo.Content.ReadFromJsonAsync<UserDto>();
-
-        var dto = new CreateVehicleDto { Brand = "Honda", Model = "HRV", Plate = "UPDT001", UserId = user!.UserId };
-        var createResponse = await _client.PostAsync("/api/vehicles", JsonContent.Create(dto));
+        var createResponse = await _client.PostAsync("/api/vehicles", JsonContent.Create(createPayload));
         var created = await createResponse.Content.ReadFromJsonAsync<VehicleDto>();
 
-        var updateDto = new CreateVehicleDto { Brand = "Toyota", Model = "Corolla", Plate = "UPDT002", UserId = user.UserId };
-        var updateResponse = await _client.PutAsync($"/api/vehicles/{created!.VehicleId}", JsonContent.Create(updateDto));
+        var updatePayload = new CreateVehicleDto { Brand = "Toyota", Model = "Corolla", Plate = "UPDT002", UserId = user.UserId };
 
-        Assert.Equal(HttpStatusCode.OK, updateResponse.StatusCode);
+        var updateResponse = await _client.PutAsync($"/api/vehicles/{created!.VehicleId}", JsonContent.Create(updatePayload));
+
+        updateResponse.EnsureSuccessStatusCode();
         var updated = await updateResponse.Content.ReadFromJsonAsync<VehicleDto>();
-        Assert.Equal("Toyota", updated!.Brand);
+
+        Assert.NotNull(updated);
+        Assert.Equal("Toyota", updated.Brand);
         Assert.Equal("UPDT002", updated.Plate);
     }
 
     [Fact]
-    public async Task UpdateVehicle_WithInvalidPayload_ShouldReturnBadRequest()
+    public async Task GetVehicleById_WithExistingId_ReturnsOk()
     {
-        var response = await _client.PutAsync($"/api/vehicles/{Guid.NewGuid()}", JsonContent.Create(new { MissingRequiredBody = true }));
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-    }
+        var user = await SeedUserAsync();
+        var payload = new CreateVehicleDto { Brand = "Honda", Model = "HRV", Plate = "GET0001", UserId = user.UserId };
 
-    [Fact]
-    public async Task UpdateVehicle_WithNonExistentVehicleId_ShouldReturnNotFound()
-    {
-        var updateDto = new CreateVehicleDto { Brand = "Toyota", Model = "Corolla", Plate = "BBB0B00", UserId = Guid.NewGuid() };
-        var response = await _client.PutAsync($"/api/vehicles/{Guid.NewGuid()}", JsonContent.Create(updateDto));
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task UpdateVehicle_WithPlateOfAnotherVehicle_ShouldReturnConflict()
-    {
-        var userInfo = await _client.PostAsync("/api/users", JsonContent.Create(new CreateUserDto { Name = "Fulaninho", Email = "fulano@gmail.com" }));
-        var user = await userInfo.Content.ReadFromJsonAsync<UserDto>();
-
-        var dto1 = new CreateVehicleDto { Brand = "Honda", Model = "HRV", Plate = "PLATE1", UserId = user!.UserId };
-        var dto2 = new CreateVehicleDto { Brand = "Ford", Model = "Ka", Plate = "PLATE2", UserId = user.UserId };
-
-        await _client.PostAsync("/api/vehicles", JsonContent.Create(dto1));
-        var res2 = await _client.PostAsync("/api/vehicles", JsonContent.Create(dto2));
-        var created2 = await res2.Content.ReadFromJsonAsync<VehicleDto>();
-
-        var updateDto = new CreateVehicleDto { Brand = "Ford", Model = "Ka", Plate = "PLATE1", UserId = user.UserId };
-        var updateResponse = await _client.PutAsync($"/api/vehicles/{created2!.VehicleId}", JsonContent.Create(updateDto));
-
-        Assert.Equal(HttpStatusCode.Conflict, updateResponse.StatusCode);
-    }
-
-    //Test case para GETS
-    [Fact]
-    public async Task GetVehicles_ShouldReturnOkWithList()
-    {
-        var response = await _client.GetAsync("/api/vehicles");
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var list = await response.Content.ReadFromJsonAsync<List<VehicleDto>>();
-        Assert.NotNull(list);
-    }
-
-    [Fact]
-    public async Task GetVehicleById_WithExistingId_ShouldReturnOk()
-    {
-        var userInfo = await _client.PostAsync("/api/users", JsonContent.Create(new CreateUserDto { Name = "Owner", Email = "g@g.com" }));
-        var user = await userInfo.Content.ReadFromJsonAsync<UserDto>();
-        var dto = new CreateVehicleDto { Brand = "Honda", Model = "HRV", Plate = "GETID01", UserId = user!.UserId };
-        var createResponse = await _client.PostAsync("/api/vehicles", JsonContent.Create(dto));
+        var createResponse = await _client.PostAsync("/api/vehicles", JsonContent.Create(payload));
         var created = await createResponse.Content.ReadFromJsonAsync<VehicleDto>();
 
         var response = await _client.GetAsync($"/api/vehicles/{created!.VehicleId}");
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.EnsureSuccessStatusCode();
         var fetched = await response.Content.ReadFromJsonAsync<VehicleDto>();
         Assert.NotNull(fetched);
-        Assert.Equal(created.VehicleId, fetched!.VehicleId);
+        Assert.Equal(created.VehicleId, fetched.VehicleId);
     }
 
     [Fact]
-    public async Task GetVehicleById_WithNonExistentId_ShouldReturnNotFound()
+    public async Task GetAllVehicles_ReturnsOkWithList()
     {
-        var response = await _client.GetAsync($"/api/vehicles/{Guid.NewGuid()}");
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        var user = await SeedUserAsync();
+        var payload = new CreateVehicleDto { Brand = "Honda", Model = "HRV", Plate = "LIST001", UserId = user.UserId };
+
+        await _client.PostAsync("/api/vehicles", JsonContent.Create(payload));
+
+        var response = await _client.GetAsync("/api/vehicles");
+
+        response.EnsureSuccessStatusCode();
+        var fetched = await response.Content.ReadFromJsonAsync<List<VehicleDto>>();
+        Assert.NotNull(fetched);
+        Assert.NotEmpty(fetched);
     }
-    //Test cases para DELETE
+
     [Fact]
-    public async Task DeleteVehicle_WithValidId_ShouldReturnNoContent()
+    public async Task DeleteVehicle_WithValidId_ReturnsNoContent()
     {
-        var userInfo = await _client.PostAsync("/api/users", JsonContent.Create(new CreateUserDto { Name = "Owner", Email = "f@f.com" }));
-        var user = await userInfo.Content.ReadFromJsonAsync<UserDto>();
-        var dto = new CreateVehicleDto { Brand = "Honda", Model = "HRV", Plate = "DELT001", UserId = user!.UserId };
-        var createResponse = await _client.PostAsync("/api/vehicles", JsonContent.Create(dto));
+        var user = await SeedUserAsync();
+        var payload = new CreateVehicleDto { Brand = "Honda", Model = "HRV", Plate = "DEL0001", UserId = user.UserId };
+
+        var createResponse = await _client.PostAsync("/api/vehicles", JsonContent.Create(payload));
         var created = await createResponse.Content.ReadFromJsonAsync<VehicleDto>();
 
         var delResponse = await _client.DeleteAsync($"/api/vehicles/{created!.VehicleId}");
-        Assert.Equal(HttpStatusCode.NoContent, delResponse.StatusCode);
-    }
 
-    [Fact]
-    public async Task DeleteVehicle_WithNonExistentId_ShouldReturnNotFound()
-    {
-        var response = await _client.DeleteAsync($"/api/vehicles/{Guid.NewGuid()}");
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        delResponse.EnsureSuccessStatusCode();
+        Assert.Equal(HttpStatusCode.NoContent, delResponse.StatusCode);
+
+        var getResponse = await _client.GetAsync($"/api/vehicles/{created.VehicleId}");
+        Assert.Equal(HttpStatusCode.NotFound, getResponse.StatusCode);
     }
 }

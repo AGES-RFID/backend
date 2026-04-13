@@ -9,6 +9,31 @@ public class VehiclesController(IVehicleService vehicleService) : ControllerBase
     private readonly IVehicleService _vehicleService = vehicleService;
     public object? Result;
 
+    [HttpGet]
+    public async Task<ActionResult<IEnumerable<VehicleDto>>> GetAllVehicles()
+    {
+        var vehicles = await _vehicleService.GetAllVehiclesAsync();
+        return Ok(vehicles);
+    }
+
+    [HttpGet("{vehicleId}")]
+    public async Task<ActionResult<VehicleDto>> GetVehicle(Guid vehicleId)
+    {
+        try
+        {
+            var vehicle = await _vehicleService.GetVehicleAsync(vehicleId);
+            return Ok(vehicle);
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (BadHttpRequestException)
+        {
+            return BadRequest();
+        }
+    }
+
     [HttpPost]
     public async Task<ActionResult<VehicleDto>> CreateVehicle(CreateVehicleDto dto)
     {
@@ -32,31 +57,6 @@ public class VehiclesController(IVehicleService vehicleService) : ControllerBase
         catch (Exception)
         {
             return StatusCode(500);
-        }
-    }
-
-    [HttpGet]
-    public async Task<ActionResult<IEnumerable<VehicleDto>>> GetAllVehicles()
-    {
-        var vehicles = await _vehicleService.GetAllVehiclesAsync();
-        return Ok(vehicles);
-    }
-
-    [HttpGet("{vehicleId}")]
-    public async Task<ActionResult<VehicleDto>> GetVehicle(Guid vehicleId)
-    {
-        try
-        {
-            var vehicle = await _vehicleService.GetVehicleAsync(vehicleId);
-            return Ok(vehicle);
-        }
-        catch (KeyNotFoundException)
-        {
-            return NotFound();
-        }
-        catch (BadHttpRequestException)
-        {
-            return BadRequest();
         }
     }
 

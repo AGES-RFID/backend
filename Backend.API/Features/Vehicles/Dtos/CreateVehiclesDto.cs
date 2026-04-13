@@ -19,4 +19,3 @@ public class CreateVehicleDto
     [MaxLength(7)]
     public required string Plate { get; set; }
 }
-

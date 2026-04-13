@@ -4,9 +4,9 @@ namespace Backend.Features.Vehicles;
 
 public interface IVehicleService
 {
-    Task<VehicleDto> CreateVehicleAsync(CreateVehicleDto dto);
-    Task<IEnumerable<VehicleDto>> GetAllVehiclesAsync();
     Task<VehicleDto> GetVehicleAsync(Guid vehicleId);
+    Task<IEnumerable<VehicleDto>> GetAllVehiclesAsync();
+    Task<VehicleDto> CreateVehicleAsync(CreateVehicleDto dto);
     Task<VehicleDto> UpdateVehicleAsync(Guid id, CreateVehicleDto dto);
     Task DeleteVehicleAsync(Guid id);
 }
@@ -28,7 +28,13 @@ public class VehicleService(AppDbContext db) : IVehicleService
             throw new InvalidOperationException("Plate already exists. Try again.");
         }
 
-        var vehicle = await _db.Vehicles.AddAsync(new Vehicle { Plate = dto.Plate, Brand = dto.Brand, Model = dto.Model, UserId = dto.UserId });
+        var vehicle = await _db.Vehicles.AddAsync(new Vehicle
+        {
+            Plate = dto.Plate,
+            Brand = dto.Brand,
+            Model = dto.Model,
+            UserId = dto.UserId
+        });
 
         await _db.SaveChangesAsync();
         return VehicleDto.FromModel(vehicle.Entity);
