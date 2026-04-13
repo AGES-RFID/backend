@@ -16,6 +16,23 @@ public class VehiclesController(IVehicleService vehicleService) : ControllerBase
         return Ok(vehicles);
     }
 
+    [HttpGet("search")]
+    public async Task<ActionResult<VehicleSearchResponseDto>> SearchVehicleByPlate([FromQuery] string? plate)
+    {
+        if (string.IsNullOrWhiteSpace(plate))
+            return BadRequest(new { error = "O parâmetro de busca 'plate' é obrigatório." });
+
+        try
+        {
+            var result = await _vehicleService.GetVehicleByPlateAsync(plate);
+            return Ok(result);
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound(new { error = "Veículo não encontrado." });
+        }
+    }
+
     [HttpGet("{vehicleId}")]
     public async Task<ActionResult<VehicleDto>> GetVehicle(Guid vehicleId)
     {

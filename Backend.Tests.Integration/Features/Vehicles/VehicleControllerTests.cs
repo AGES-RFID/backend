@@ -80,6 +80,38 @@ public class VehicleControllerTests(CustomWebApplicationFactory factory) : IClas
     }
 
     [Fact]
+    public async Task SearchVehicleByPlate_WithExistingPlate_ReturnsOkWithDetails()
+    {
+        var user = await SeedUserAsync();
+        var payload = new CreateVehicleDto { Brand = "Honda", Model = "HRV", Plate = "SEARCH1", UserId = user.UserId };
+        await _client.PostAsync("/api/vehicles", JsonContent.Create(payload));
+
+        var response = await _client.GetAsync("/api/vehicles/search?plate=SEARCH1");
+
+        response.EnsureSuccessStatusCode();
+        var fetched = await response.Content.ReadFromJsonAsync<VehicleSearchResponseDto>();
+
+        Assert.NotNull(fetched);
+        Assert.Equal("SEARCH1", fetched.Plate);
+        Assert.Equal(user.Name, fetched.OwnerName);
+        Assert.NotEqual(Guid.Empty, fetched.VehicleId);
+    }
+
+    [Fact]
+    public async Task SearchVehicleByPlate_WithMissingQueryParam_ReturnsBadRequest()
+    {
+        var response = await _client.GetAsync("/api/vehicles/search");
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task SearchVehicleByPlate_WithNonExistentPlate_ReturnsNotFound()
+    {
+        var response = await _client.GetAsync("/api/vehicles/search?plate=GHOST99");
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
     public async Task UpdateVehicle_WithValidData_ReturnsOk()
     {
         var user = await SeedUserAsync();

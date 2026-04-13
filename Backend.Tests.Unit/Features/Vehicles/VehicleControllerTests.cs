@@ -125,6 +125,46 @@ public class VehicleControllerTests
     }
 
     [Fact]
+    public async Task SearchVehicleByPlate_WhenPlateIsNullOrWhiteSpace_ReturnsBadRequest()
+    {
+        var vehicleService = Substitute.For<IVehicleService>();
+        var controller = new VehiclesController(vehicleService);
+
+        var result = await controller.SearchVehicleByPlate("   ");
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task SearchVehicleByPlate_WhenServiceThrowsKeyNotFoundException_ReturnsNotFound()
+    {
+        var vehicleService = Substitute.For<IVehicleService>();
+        vehicleService.GetVehicleByPlateAsync("NOTFND")
+            .Returns(Task.FromException<VehicleSearchResponseDto>(new KeyNotFoundException()));
+
+        var controller = new VehiclesController(vehicleService);
+
+        var result = await controller.SearchVehicleByPlate("NOTFND");
+
+        Assert.IsType<NotFoundObjectResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task SearchVehicleByPlate_WhenSuccess_ReturnsOk()
+    {
+        var expected = new VehicleSearchResponseDto { VehicleId = Guid.NewGuid(), OwnerName = "Test", Plate = "AAA9A99" };
+        var vehicleService = Substitute.For<IVehicleService>();
+        vehicleService.GetVehicleByPlateAsync("AAA9A99").Returns(expected);
+
+        var controller = new VehiclesController(vehicleService);
+
+        var result = await controller.SearchVehicleByPlate("AAA9A99");
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        Assert.Equal(expected, ok.Value);
+    }
+
+    [Fact]
     public async Task UpdateVehicle_WhenServiceThrowsKeyNotFoundException_ReturnsNotFound()
     {
         var vehicleId = Guid.NewGuid();
