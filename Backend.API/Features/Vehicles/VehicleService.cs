@@ -79,12 +79,19 @@ public class VehicleService(AppDbContext db) : IVehicleService
         var vehicle = await _db.Vehicles.FirstOrDefaultAsync(v => v.VehicleId == id)
             ?? throw new KeyNotFoundException($"Vehicle with id {id} not found");
 
+        var existsUser = await _db.Users.AnyAsync(u => u.UserId == dto.UserId);
+        if (!existsUser)
+        {
+            throw new KeyNotFoundException("User not found");
+        }
+
         var exists = await _db.Vehicles.AnyAsync(v => v.Plate == dto.Plate && v.VehicleId != id);
         if (exists)
         {
             throw new InvalidOperationException("Plate already exists. Try again.");
         }
 
+        vehicle.UserId = dto.UserId;
         vehicle.Plate = dto.Plate;
         vehicle.Brand = dto.Brand;
         vehicle.Model = dto.Model;
