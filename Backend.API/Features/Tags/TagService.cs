@@ -102,7 +102,7 @@ public class TagService(AppDbContext db) : ITagService
 
         // Check if vehicle exists
         var vehicle = await _db.Vehicles.FirstOrDefaultAsync(v => v.VehicleId == dto.VehicleId)
-            ?? throw new KeyNotFoundException($"Vehicle with id {dto.VehicleId} not found");  
+            ?? throw new KeyNotFoundException($"Vehicle with id {dto.VehicleId} not found");
 
         // Check if tag is already assigned
         if (tag.Status == TagStatus.IN_USE)
