@@ -4,11 +4,15 @@ using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-
-using Backend.Features.Users;
-using Backend.Features.Auth;
-using Backend.Database;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
+
+
+using Backend.Database;
+using Backend.Features.Tags;
+using Backend.Features.Auth;
+using Backend.Features.Users;
+using Backend.Features.Vehicles;
 using Backend.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -75,6 +79,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // Register feature services
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IVehicleService, VehicleService>();
+builder.Services.AddScoped<ITagService, TagService>();
 
 // Configure JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>()
