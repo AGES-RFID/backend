@@ -5,7 +5,7 @@ namespace Backend.Features.Vehicles;
 public interface IVehicleService
 {
     Task<VehicleDto> GetVehicleAsync(Guid vehicleId);
-    Task<IEnumerable<VehicleDto>> GetAllVehiclesAsync();
+    Task<IEnumerable<VehicleDto>> GetAllVehiclesAsync(bool includeUsers);
     Task<VehicleDto> CreateVehicleAsync(CreateVehicleDto dto);
     Task<VehicleDto> UpdateVehicleAsync(Guid id, CreateVehicleDto dto);
     Task DeleteVehicleAsync(Guid id);
@@ -41,9 +41,15 @@ public class VehicleService(AppDbContext db) : IVehicleService
         return VehicleDto.FromModel(vehicle.Entity);
     }
 
-    public async Task<IEnumerable<VehicleDto>> GetAllVehiclesAsync()
+    public async Task<IEnumerable<VehicleDto>> GetAllVehiclesAsync(bool includeUsers)
     {
-        var vehicles = await _db.Vehicles.AsNoTracking()
+        var query = _db.Vehicles.AsNoTracking();
+        if (includeUsers)
+        {
+            query = query.Include(v => v.User);
+        }
+
+        var vehicles = await query
             .Select(v => VehicleDto.FromModel(v))
             .ToListAsync();
 

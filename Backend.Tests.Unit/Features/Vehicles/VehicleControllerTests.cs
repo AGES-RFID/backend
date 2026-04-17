@@ -51,11 +51,13 @@ public class VehicleControllerTests
         };
 
         var vehicleService = Substitute.For<IVehicleService>();
-        vehicleService.GetAllVehiclesAsync().Returns(expectedList);
+        vehicleService.GetAllVehiclesAsync(false).Returns(expectedList);
 
         var controller = new VehiclesController(vehicleService);
 
         var result = await controller.GetAllVehicles();
+
+        await vehicleService.Received(1).GetAllVehiclesAsync(false);
 
         var okResult = Assert.IsType<OkObjectResult>(result.Result);
         var actualList = Assert.IsAssignableFrom<IEnumerable<VehicleDto>>(okResult.Value);
