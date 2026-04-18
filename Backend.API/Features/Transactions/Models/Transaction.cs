@@ -7,5 +7,5 @@ public class Transaction
     public decimal Amount { get; set; }
     public DateTime CreatedAt { get; set; }
     public required string Description { get; set; }
-    public required Boolean TransactionType  { get; set; }
+    public required TransactionType TransactionType  { get; set; }
 }
