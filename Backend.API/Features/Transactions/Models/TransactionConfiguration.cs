@@ -9,7 +9,10 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
  {
      public void Configure(EntityTypeBuilder<Transaction> builder)
      {
-         builder.HasKey(t => t.UserId);
+         builder.HasKey(t => t.Id);
+
+         builder.Property(t => t.UserId)
+             .IsRequired();
 
          builder.Property(t => t.Description)
              .IsRequired();
