@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
  {
      public void Configure(EntityTypeBuilder<Transaction> builder)
      {
-         builder.HasKey(t => t.Id);
+         builder.HasKey(t => t.TransactionId);
 
          builder.Property(t => t.UserId)
              .IsRequired();
@@ -19,6 +19,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
          builder.Property(t => t.TransactionType)
              .IsRequired()
+             .HasConversion<string>()
              .HasColumnType("transaction_type");
 
          builder.Property(t => t.Amount)
