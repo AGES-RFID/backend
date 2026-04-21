@@ -11,7 +11,10 @@ namespace Backend.Database.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.Sql("CREATE TYPE transaction_type AS ENUM ('DEPOSIT', 'WITHDRAWAL');");
+            migrationBuilder.AlterDatabase()
+                .Annotation("Npgsql:Enum:public.transaction_type", "deposit,withdrawal")
+                .Annotation("Npgsql:Enum:public.user_role", "admin,customer")
+                .OldAnnotation("Npgsql:Enum:public.user_role", "admin,customer");
 
             migrationBuilder.CreateTable(
                 name: "transactions",
@@ -23,7 +26,7 @@ namespace Backend.Database.Migrations
                     created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "now()"),
                     updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     description = table.Column<string>(type: "text", nullable: false),
-                    transaction_type = table.Column<string>(type: "transaction_type", nullable: false, defaultValue: "DEPOSIT")
+                    transaction_type = table.Column<string>(type: "transaction_type", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -37,7 +40,10 @@ namespace Backend.Database.Migrations
             migrationBuilder.DropTable(
                 name: "transactions");
 
-            migrationBuilder.Sql("DROP TYPE IF EXISTS transaction_type;");
+            migrationBuilder.AlterDatabase()
+                .Annotation("Npgsql:Enum:public.user_role", "admin,customer")
+                .OldAnnotation("Npgsql:Enum:public.transaction_type", "deposit,withdrawal")
+                .OldAnnotation("Npgsql:Enum:public.user_role", "admin,customer");
         }
     }
 }

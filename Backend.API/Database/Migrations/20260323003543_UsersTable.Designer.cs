@@ -9,7 +9,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Backend.Migrations
+namespace Backend.Database.Migrations
 {
     [DbContext(typeof(AppDbContext))]
     [Migration("20260323003543_UsersTable")]
