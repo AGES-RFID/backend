@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Backend.Migrations
+namespace Backend.Database.Migrations
 {
     /// <inheritdoc />
     public partial class UsersTable : Migration

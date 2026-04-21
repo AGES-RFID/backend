@@ -1,5 +1,6 @@
 using System.Reflection;
 using Backend.Features.Tags;
+using Backend.Features.Transactions;
 using Backend.Features.Users;
 using Backend.Features.Vehicles;
 using Microsoft.EntityFrameworkCore;
@@ -12,6 +13,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Vehicle> Vehicles { get; set; }
     public DbSet<Tag> Tags { get; set; }
 
+    public DbSet<Transaction> Transactions { get; set; }
     public override int SaveChanges()
     {
         ApplyTimestamps();
@@ -62,6 +64,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasPostgresEnum<UserRole>("public", "user_role");
+        modelBuilder.HasPostgresEnum<TransactionType>("public", "transaction_type");
         base.OnModelCreating(modelBuilder);
         modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
     }
