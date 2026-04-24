@@ -65,6 +65,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     {
         modelBuilder.HasPostgresEnum<UserRole>("public", "user_role");
         modelBuilder.HasPostgresEnum<TransactionType>("public", "transaction_type");
+        modelBuilder.HasPostgresEnum<Backend.Features.Accesses.AcessType>("public", "Acess_Type");
         base.OnModelCreating(modelBuilder);
         modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
     }
