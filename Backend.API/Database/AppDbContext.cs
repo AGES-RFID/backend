@@ -12,6 +12,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<User> Users { get; set; }
     public DbSet<Vehicle> Vehicles { get; set; }
     public DbSet<Tag> Tags { get; set; }
+    public DbSet<Backend.Features.Accesses.Accesses> Accesses { get; set; }
 
     public DbSet<Transaction> Transactions { get; set; }
     public override int SaveChanges()

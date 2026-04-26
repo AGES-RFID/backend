@@ -13,7 +13,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Backend.Database.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260424230343_AccessesTable")]
+    [Migration("20260426024251_AccessesTable")]
     partial class AccessesTable
     {
         /// <inheritdoc />
