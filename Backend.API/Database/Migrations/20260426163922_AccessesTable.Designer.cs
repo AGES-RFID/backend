@@ -13,7 +13,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Backend.Database.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260426024251_AccessesTable")]
+    [Migration("20260426163922_AccessesTable")]
     partial class AccessesTable
     {
         /// <inheritdoc />
@@ -24,17 +24,17 @@ namespace Backend.Database.Migrations
                 .HasAnnotation("ProductVersion", "10.0.3")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
-            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "public", "Acess_Type", new[] { "exit", "entry" });
+            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "public", "access_type", new[] { "exit", "entry" });
             NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "public", "transaction_type", new[] { "deposit", "withdrawal" });
             NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "public", "user_role", new[] { "admin", "customer" });
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("Backend.Features.Accesses.Accesses", b =>
+            modelBuilder.Entity("Backend.Features.Accesses.Access", b =>
                 {
-                    b.Property<Guid>("AccessesId")
+                    b.Property<Guid>("AccessId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
-                        .HasColumnName("accesses_id");
+                        .HasColumnName("access_id");
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
@@ -54,7 +54,7 @@ namespace Backend.Database.Migrations
                         .HasDefaultValueSql("now()");
 
                     b.Property<int>("Type")
-                        .HasColumnType("Acess_Type")
+                        .HasColumnType("access_type")
                         .HasColumnName("type");
 
                     b.Property<DateTime>("UpdatedAt")
@@ -63,7 +63,7 @@ namespace Backend.Database.Migrations
                         .HasColumnName("updated_at")
                         .HasDefaultValueSql("now()");
 
-                    b.HasKey("AccessesId")
+                    b.HasKey("AccessId")
                         .HasName("pk_accesses");
 
                     b.HasIndex("TagId")
@@ -250,7 +250,7 @@ namespace Backend.Database.Migrations
                     b.ToTable("vehicles", (string)null);
                 });
 
-            modelBuilder.Entity("Backend.Features.Accesses.Accesses", b =>
+            modelBuilder.Entity("Backend.Features.Accesses.Access", b =>
                 {
                     b.HasOne("Backend.Features.Tags.Tag", "Tag")
                         .WithMany()

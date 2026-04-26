@@ -1,6 +1,6 @@
 namespace Backend.Features.Accesses;
 
-public enum AcessType
+public enum AccessType
 {
     EXIT = 0,
     ENTRY = 1

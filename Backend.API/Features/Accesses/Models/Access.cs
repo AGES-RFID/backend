@@ -2,11 +2,11 @@ using Backend.Features.Tags;
 
 namespace Backend.Features.Accesses;
 
-public class Accesses
+public class Access
 {
-    public Guid AccessesId { get; set; } = Guid.NewGuid();
+    public Guid AccessId { get; set; } = Guid.NewGuid();
     public required string TagId { get; set; }
-    public required AcessType Type { get; set; }
+    public required AccessType Type { get; set; }
 
     public required Tag Tag { get; set; }
 

@@ -4,15 +4,15 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Backend.Features.Accesses.Models;
 
-public class AccessesConfiguration : IEntityTypeConfiguration<Accesses>
+public class AccessesConfiguration : IEntityTypeConfiguration<Access>
 {
-    public void Configure(EntityTypeBuilder<Accesses> builder)
+    public void Configure(EntityTypeBuilder<Access> builder)
     {
-        builder.HasKey(a => a.AccessesId);
+        builder.HasKey(a => a.AccessId);
 
         builder.Property(a => a.Type)
         .IsRequired()
-        .HasColumnType("Acess_Type");
+        .HasColumnType("access_type");
 
         builder.Property(a => a.Timestamp)
         .IsRequired()

@@ -3,6 +3,7 @@ using Backend.Features.Tags;
 using Backend.Features.Transactions;
 using Backend.Features.Users;
 using Backend.Features.Vehicles;
+using Backend.Features.Accesses;
 using Microsoft.EntityFrameworkCore;
 
 namespace Backend.Database;
@@ -12,8 +13,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<User> Users { get; set; }
     public DbSet<Vehicle> Vehicles { get; set; }
     public DbSet<Tag> Tags { get; set; }
-    public DbSet<Backend.Features.Accesses.Accesses> Accesses { get; set; }
-
+    public DbSet<Access> Accesses { get; set; }
     public DbSet<Transaction> Transactions { get; set; }
     public override int SaveChanges()
     {
@@ -66,7 +66,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     {
         modelBuilder.HasPostgresEnum<UserRole>("public", "user_role");
         modelBuilder.HasPostgresEnum<TransactionType>("public", "transaction_type");
-        modelBuilder.HasPostgresEnum<Backend.Features.Accesses.AcessType>("public", "Acess_Type");
+        modelBuilder.HasPostgresEnum<AccessType>("public", "access_type");
         base.OnModelCreating(modelBuilder);
         modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
     }
