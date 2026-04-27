@@ -14,6 +14,7 @@ using Backend.Features.Auth;
 using Backend.Features.Users;
 using Backend.Features.Vehicles;
 using Backend.Configuration;
+using Backend.Features.Dashboard;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -84,6 +85,7 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IVehicleService, VehicleService>();
 builder.Services.AddScoped<ITagService, TagService>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
 
 // Configure JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>()

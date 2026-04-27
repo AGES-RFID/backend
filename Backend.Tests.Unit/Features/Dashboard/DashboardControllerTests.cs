@@ -1,0 +1,93 @@
+using Backend.Features.Dashboard;
+using Microsoft.AspNetCore.Mvc;
+using NSubstitute;
+
+namespace Backend.Tests.Unit.Features.Dashboard;
+
+public class DashboardControllerTests
+{
+    private static OccupancyDto MakeOccupancyDto(int count = 0) => new()
+    {
+        CurrentOccupancy = count,
+        Vehicles = []
+    };
+
+    // ── GetOccupancy ──────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task GetOccupancy_WhenServiceSucceeds_ReturnsOk()
+    {
+        var expected = MakeOccupancyDto(2);
+
+        var service = Substitute.For<IDashboardService>();
+        service.GetOccupancyAsync().Returns(expected);
+
+        var controller = new DashboardController(service);
+
+        var result = await controller.GetOccupancy();
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var dto = Assert.IsType<OccupancyDto>(ok.Value);
+        Assert.Equal(2, dto.CurrentOccupancy);
+    }
+
+    [Fact]
+    public async Task GetOccupancy_WhenServiceSucceeds_ReturnsStatusCode200()
+    {
+        var service = Substitute.For<IDashboardService>();
+        service.GetOccupancyAsync().Returns(MakeOccupancyDto());
+
+        var controller = new DashboardController(service);
+
+        var result = await controller.GetOccupancy();
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        Assert.Equal(200, ok.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetOccupancy_WhenServiceSucceeds_CallsServiceExactlyOnce()
+    {
+        var service = Substitute.For<IDashboardService>();
+        service.GetOccupancyAsync().Returns(MakeOccupancyDto());
+
+        var controller = new DashboardController(service);
+
+        await controller.GetOccupancy();
+
+        await service.Received(1).GetOccupancyAsync();
+    }
+
+    [Fact]
+    public async Task GetOccupancy_WhenServiceThrowsException_Returns500()
+    {
+        var service = Substitute.For<IDashboardService>();
+        service.GetOccupancyAsync()
+            .Returns(Task.FromException<OccupancyDto>(new Exception("db error")));
+
+        var controller = new DashboardController(service);
+
+        var result = await controller.GetOccupancy();
+
+        var statusResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(500, statusResult.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetOccupancy_WhenNoVehiclesInside_ReturnsZeroOccupancy()
+    {
+        var expected = MakeOccupancyDto(0);
+
+        var service = Substitute.For<IDashboardService>();
+        service.GetOccupancyAsync().Returns(expected);
+
+        var controller = new DashboardController(service);
+
+        var result = await controller.GetOccupancy();
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var dto = Assert.IsType<OccupancyDto>(ok.Value);
+        Assert.Equal(0, dto.CurrentOccupancy);
+        Assert.Empty(dto.Vehicles);
+    }
+}
