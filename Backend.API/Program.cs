@@ -9,6 +9,8 @@ using Microsoft.OpenApi;
 
 
 using Backend.Database;
+using Backend.Features.Dashboard;
+using Backend.Features.Accesses;
 using Backend.Features.Tags;
 using Backend.Features.Auth;
 using Backend.Features.Users;
@@ -84,6 +86,7 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IVehicleService, VehicleService>();
 builder.Services.AddScoped<ITagService, TagService>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
 
 // Configure JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>()
