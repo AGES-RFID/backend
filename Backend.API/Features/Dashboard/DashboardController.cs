@@ -18,6 +18,7 @@ public class DashboardController(IDashboardService dashboardService) : Controlle
         }
         catch (Exception)
         {
+            Console.Error.WriteLine("Error calculating dashboard metrics");
             return StatusCode(500, new { error = "Erro interno ao calcular métricas" });
         }
     }

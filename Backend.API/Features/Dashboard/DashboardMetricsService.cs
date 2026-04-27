@@ -20,13 +20,13 @@ public class DashboardService(AppDbContext db) : IDashboardService
         var twentyFourHoursAgo = now.AddHours(-24);
 
         var entriesLastHour = await _db.Accesses
-            .CountAsync(a => a.Type == AccessType.ENTRY && a.Timestamp >= oneHourAgo);
+            .CountAsync(a => a.Type == AccessType.Entry && a.Timestamp >= oneHourAgo);
 
         var exitsLastHour = await _db.Accesses
-            .CountAsync(a => a.Type == AccessType.EXIT && a.Timestamp >= oneHourAgo);
+            .CountAsync(a => a.Type == AccessType.Exit && a.Timestamp >= oneHourAgo);
 
         var peakEntryTime = await _db.Accesses
-            .Where(a => a.Type == AccessType.ENTRY && a.Timestamp >= twentyFourHoursAgo)
+            .Where(a => a.Type == AccessType.Entry && a.Timestamp >= twentyFourHoursAgo)
             .GroupBy(a => a.Timestamp.Hour)
             .OrderByDescending(g => g.Count())
             .Select(g => g.Key)
