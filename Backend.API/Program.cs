@@ -4,7 +4,6 @@ using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
 
 
@@ -13,6 +12,7 @@ using Backend.Features.Tags;
 using Backend.Features.Auth;
 using Backend.Features.Users;
 using Backend.Features.Vehicles;
+using Backend.Features.Transactions;
 using Backend.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -71,8 +71,10 @@ if (builder.Environment.IsDevelopment())
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString, o =>
-        o.MapEnum<UserRole>("user_role", "public")
-    )
+    {
+        o.MapEnum<UserRole>("user_role", "public");
+        o.MapEnum<TransactionType>("transaction_type", "public");
+    })
     .UseSnakeCaseNamingConvention()
 );
 
@@ -81,6 +83,7 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IVehicleService, VehicleService>();
 builder.Services.AddScoped<ITagService, TagService>();
+builder.Services.AddScoped<ITransactionService, TransactionService>();
 
 // Configure JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>()
@@ -134,5 +137,6 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+
 
 app.Run();

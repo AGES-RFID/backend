@@ -19,7 +19,6 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
          builder.Property(t => t.TransactionType)
              .IsRequired()
-             .HasConversion<string>()
              .HasColumnType("transaction_type");
 
          builder.Property(t => t.Amount)
