@@ -50,6 +50,10 @@ namespace Backend.Database.Migrations
                         .HasColumnType("text")
                         .HasColumnName("name");
 
+                    b.Property<decimal>("Balance")
+                        .HasColumnType("decimal(38, 2)")
+                        .HasColumnName("balance");
+
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasColumnType("text")

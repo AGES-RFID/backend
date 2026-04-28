@@ -26,6 +26,13 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .IsRequired()
             .HasColumnType("user_role");
 
+        builder.Property(u => u.Balance)
+            .HasColumnType("decimal(38, 2)");
+
+        builder.HasMany(u => u.Vehicles)
+            .WithOne(v => v.User)
+            .HasForeignKey(v => v.UserId);
+
         builder.Property(u => u.CreatedAt)
             .IsRequired()
             .HasDefaultValueSql("now()")
