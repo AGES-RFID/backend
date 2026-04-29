@@ -1,3 +1,5 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using Backend.Database;
 using Backend.Features.Users;
 using Backend.Features.Transactions;
@@ -10,14 +12,21 @@ public interface ITransactionService
     Task<TransactionResponseDto> CreateTransactionAsync(CreateTransactionDto dto);
 }
 
-public class TransactionService(AppDbContext db) : ITransactionService
+public class TransactionService(AppDbContext db, IHttpContextAccessor httpContextAccessor, IUserService userService) : ITransactionService
 {
     private readonly AppDbContext _db = db;
+    private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
+    private readonly IUserService _userService = userService;
 
     public async Task<TransactionResponseDto> CreateTransactionAsync(CreateTransactionDto dto)
     {
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.UserId == dto.UserId)
-            ?? throw new KeyNotFoundException($"Usuário com o id {dto.UserId} não foi encontrado");
+        var sub = _httpContextAccessor.HttpContext?.User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+        if (!Guid.TryParse(sub, out var userId))
+            throw new InvalidOperationException("Token inválido");
+
+        var user = await _userService.GetUserAsync(userId);
+        if (user == null)
+            throw new InvalidOperationException("Usuário não encontrado");
 
         var transaction = await _db.Transactions.AddAsync(new Transaction
         {

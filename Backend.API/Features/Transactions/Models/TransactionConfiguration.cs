@@ -17,16 +17,9 @@ public class TransactionConfiguration : IEntityTypeConfiguration<Transaction>
         builder.Property(t => t.Description)
             .IsRequired();
 
-<<<<<<< feat/41-create-transaction-endpoint
          builder.Property(t => t.TransactionType)
              .IsRequired()
              .HasColumnType("transaction_type");
-=======
-        builder.Property(t => t.TransactionType)
-            .IsRequired()
-            .HasConversion<string>()
-            .HasColumnType("transaction_type");
->>>>>>> main
 
         builder.Property(t => t.Amount)
             .IsRequired()
