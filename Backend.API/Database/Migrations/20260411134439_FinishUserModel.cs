@@ -11,6 +11,9 @@ namespace Backend.Database.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.AlterDatabase()
+                .Annotation("Npgsql:Enum:public.user_role", "admin,customer");
+
             migrationBuilder.AddColumn<string>(
                 name: "password_hash",
                 table: "users",
@@ -46,6 +49,9 @@ namespace Backend.Database.Migrations
             migrationBuilder.DropColumn(
                 name: "role",
                 table: "users");
+
+            migrationBuilder.AlterDatabase()
+                .OldAnnotation("Npgsql:Enum:public.user_role", "admin,customer");
         }
     }
 }
