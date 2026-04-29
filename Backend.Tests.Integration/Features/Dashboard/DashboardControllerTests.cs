@@ -22,8 +22,6 @@ public class DashboardControllerTests(CustomWebApplicationFactory factory)
     public async Task InitializeAsync() => await factory.ResetDatabaseAsync();
     public Task DisposeAsync() => Task.CompletedTask;
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
-
     private async Task<(User user, Vehicle vehicle, Tag tag)> SeedVehicleWithTagAsync(string plate)
     {
         using var scope = _scopeFactory.CreateScope();
@@ -75,7 +73,6 @@ public class DashboardControllerTests(CustomWebApplicationFactory factory)
         await db.SaveChangesAsync();
     }
 
-    // ── Tests ─────────────────────────────────────────────────────────────────
 
     [Fact]
     public async Task GetOccupancy_WhenNoAccesses_ReturnsZeroOccupancy()
@@ -134,17 +131,14 @@ public class DashboardControllerTests(CustomWebApplicationFactory factory)
     public async Task GetOccupancy_OnlyCountsVehiclesWhoseLastAccessIsEntry()
     {
         var baseTime = DateTime.UtcNow;
-
-        // Vehicle A: entered and stayed inside
+        //Access flow(Entry)
         var (_, _, tagA) = await SeedVehicleWithTagAsync("CAR-A");
         await SeedAccessAsync(tagA.TagId, AccessType.ENTRY, baseTime.AddMinutes(-30));
-
-        // Vehicle B: entered then exited
+        //Access flow(Entry-Exit)
         var (_, _, tagB) = await SeedVehicleWithTagAsync("CAR-B");
         await SeedAccessAsync(tagB.TagId, AccessType.ENTRY, baseTime.AddMinutes(-20));
         await SeedAccessAsync(tagB.TagId, AccessType.EXIT, baseTime.AddMinutes(-5));
-
-        // Vehicle C: entered, exited, entered again (back inside)
+        //Access flow(Entry-Exit-Entry)
         var (_, _, tagC) = await SeedVehicleWithTagAsync("CAR-C");
         await SeedAccessAsync(tagC.TagId, AccessType.ENTRY, baseTime.AddMinutes(-60));
         await SeedAccessAsync(tagC.TagId, AccessType.EXIT, baseTime.AddMinutes(-40));
@@ -157,7 +151,7 @@ public class DashboardControllerTests(CustomWebApplicationFactory factory)
             CustomWebApplicationFactory.JsonOptions);
 
         Assert.NotNull(body);
-        Assert.Equal(2, body.CurrentOccupancy); // A and C
+        Assert.Equal(2, body.CurrentOccupancy);
         Assert.Equal(2, body.Vehicles.Count());
 
         var plates = body.Vehicles.Select(v => v.Plate).ToHashSet();

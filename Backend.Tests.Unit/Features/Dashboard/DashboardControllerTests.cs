@@ -12,8 +12,6 @@ public class DashboardControllerTests
         Vehicles = []
     };
 
-    // ── GetOccupancy ──────────────────────────────────────────────────────────
-
     [Fact]
     public async Task GetOccupancy_WhenServiceSucceeds_ReturnsOk()
     {
@@ -69,7 +67,7 @@ public class DashboardControllerTests
 
         var result = await controller.GetOccupancy();
 
-        var statusResult = Assert.IsType<ObjectResult>(result.Result);
+        var statusResult = Assert.IsType<StatusCodeResult>(result.Result);
         Assert.Equal(500, statusResult.StatusCode);
     }
 

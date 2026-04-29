@@ -16,8 +16,6 @@ public class DashboardService(AppDbContext db) : IDashboardService
 
     public async Task<OccupancyDto> GetOccupancyAsync()
     {
-        // Passo 1: busca o último tipo de acesso por tag.
-        // Um veículo está dentro quando seu último acesso é ENTRY.
         var tagIdsInside = await _db.Accesses
             .AsNoTracking()
             .GroupBy(a => a.TagId)
@@ -30,7 +28,6 @@ public class DashboardService(AppDbContext db) : IDashboardService
             .Select(x => x.TagId)
             .ToListAsync();
 
-        // Passo 2: busca os veículos cujas tags estão dentro, com Include seguro.
         var vehicles = await _db.Vehicles
             .AsNoTracking()
             .Include(v => v.User)

@@ -6,6 +6,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
+using Backend.Features.Accesses;
+using Backend.Features.Transactions;
 
 
 using Backend.Database;
@@ -75,8 +77,11 @@ if (builder.Environment.IsDevelopment())
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString, o =>
-        o.MapEnum<UserRole>("user_role", "public")
-    )
+    {
+        o.MapEnum<UserRole>("user_role", "public");
+        o.MapEnum<TransactionType>("transaction_type", "public");
+        o.MapEnum<AccessType>("access_type", "public");
+    })
     .UseSnakeCaseNamingConvention()
 );
 
