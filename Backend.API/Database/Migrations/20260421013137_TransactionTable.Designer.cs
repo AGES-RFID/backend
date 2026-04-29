@@ -4,70 +4,29 @@ using Backend.Database;
 using Backend.Features.Users;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Backend.Migrations
+namespace Backend.Database.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260421013137_TransactionTable")]
+    partial class TransactionTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
                 .HasAnnotation("ProductVersion", "10.0.3")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
-            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "public", "access_type", new[] { "exit", "entry" });
             NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "public", "transaction_type", new[] { "deposit", "withdrawal" });
             NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "public", "user_role", new[] { "admin", "customer" });
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
-
-            modelBuilder.Entity("Backend.Features.Accesses.Access", b =>
-                {
-                    b.Property<Guid>("AccessId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("access_id");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<string>("TagId")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("tag_id");
-
-                    b.Property<DateTime>("Timestamp")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("timestamp")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<int>("Type")
-                        .HasColumnType("access_type")
-                        .HasColumnName("type");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at")
-                        .HasDefaultValueSql("now()");
-
-                    b.HasKey("AccessId")
-                        .HasName("pk_accesses");
-
-                    b.HasIndex("TagId")
-                        .HasDatabaseName("ix_accesses_tag_id");
-
-                    b.ToTable("accesses", (string)null);
-                });
 
             modelBuilder.Entity("Backend.Features.Tags.Tag", b =>
                 {
@@ -245,18 +204,6 @@ namespace Backend.Migrations
                         .HasDatabaseName("ix_vehicles_user_id");
 
                     b.ToTable("vehicles", (string)null);
-                });
-
-            modelBuilder.Entity("Backend.Features.Accesses.Access", b =>
-                {
-                    b.HasOne("Backend.Features.Tags.Tag", "Tag")
-                        .WithMany()
-                        .HasForeignKey("TagId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_accesses_tags_tag_id");
-
-                    b.Navigation("Tag");
                 });
 
             modelBuilder.Entity("Backend.Features.Vehicles.Vehicle", b =>

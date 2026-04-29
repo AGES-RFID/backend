@@ -17,6 +17,9 @@ using Backend.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Registra o suporte para AWS Lambda. Se rodar local, este metodo eh ignorado.
+builder.Services.AddAWSLambdaHosting(LambdaEventSource.HttpApi);
+
 const string DevCorsPolicyName = "DevCors";
 
 // Add services to the container

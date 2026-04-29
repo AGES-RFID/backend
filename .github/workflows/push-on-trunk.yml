@@ -13,6 +13,7 @@ jobs:
       dotnet-version: "10.0.x"
     secrets:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
   deploy-staging:
     name: CD Staging
@@ -21,3 +22,4 @@ jobs:
     with:
       environment: 'staging'
       version: ${{ github.sha }}
+    secrets: inherit

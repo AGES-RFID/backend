@@ -8,5 +8,5 @@ public class Transaction
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public required string Description { get; set; }
-    public required TransactionType TransactionType  { get; set; }
+    public required TransactionType TransactionType { get; set; }
 }
