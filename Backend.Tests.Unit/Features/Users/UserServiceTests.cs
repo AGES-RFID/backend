@@ -1,5 +1,6 @@
 using Backend.Database;
 using Backend.Features.Users;
+using Backend.Features.Vehicles;
 using Microsoft.EntityFrameworkCore;
 
 namespace Backend.Tests.Unit.Features.Users;
@@ -156,5 +157,68 @@ public class UserServiceTests
     {
         var db = CreateInMemoryDb();
         await Assert.ThrowsAsync<KeyNotFoundException>(() => new UserService(db).DeleteUserAsync(Guid.NewGuid()));
+    }
+
+    [Fact]
+    public async Task GetUserAsync_WhenUserExists_ReturnsVehicles()
+    {
+        var db = CreateInMemoryDb();
+        var user = CreateUser();
+        db.Users.Add(user);
+        db.Vehicles.Add(new Vehicle
+        {
+            UserId = user.UserId,
+            Plate = "ABC1234",
+            Brand = "toyota",
+            Model = "corolla"
+        });
+        await db.SaveChangesAsync();
+
+        var result = await new UserService(db).GetUserAsync(user.UserId);
+
+        Assert.Single(result.Vehicles);
+    }
+
+    [Fact]
+    public async Task GetUserAsync_WhenUserHasNoVehicles_ReturnsEmptyVehicles()
+    {
+        var db = CreateInMemoryDb();
+        var user = CreateUser();
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        var result = await new UserService(db).GetUserAsync(user.UserId);
+
+        Assert.Empty(result.Vehicles);
+    }
+
+    [Fact]
+    public async Task UpdateUserAsync_WhenOnlyNameProvided_UpdatesNameOnly()
+    {
+        var db = CreateInMemoryDb();
+        var user = CreateUser();
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        var dto = new UpdateUserDto { Name = "Novo Nome" };
+        var result = await new UserService(db).UpdateUserAsync(user.UserId, dto);
+
+        Assert.Equal("Novo Nome", result.Name);
+        Assert.Equal(user.Email, result.Email);
+    }
+
+    [Fact]
+    public async Task UpdateUserAsync_WhenOnlyRoleProvided_UpdatesRoleOnly()
+    {
+        var db = CreateInMemoryDb();
+        var user = CreateUser();
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        var dto = new UpdateUserDto { Role = UserRole.Customer };
+        var result = await new UserService(db).UpdateUserAsync(user.UserId, dto);
+
+        Assert.Equal(UserRole.Customer, result.Role);
+        Assert.Equal(user.Name, result.Name);
     }
 }

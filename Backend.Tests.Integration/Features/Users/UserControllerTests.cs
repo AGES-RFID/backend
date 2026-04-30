@@ -155,4 +155,63 @@ public class UserControllerTests(CustomWebApplicationFactory factory) : IClassFi
         Assert.Equal("user@email.com", updatedUser?.Email);
         Assert.Equal(UserRole.Customer, updatedUser?.Role);
     }
+
+    [Fact]
+    public async Task GetUser_ShouldReturnVehiclesWhenUserHasVehicles()
+    {
+        var newUser = new CreateUserDto { Name = "Ricardo", Email = "ricardo@email.com", Password = "password123", Role = UserRole.Admin };
+        var createResponse = await _client.PostAsync("/api/users", JsonContent.Create(newUser, options: CustomWebApplicationFactory.JsonOptions));
+        var createdUser = await createResponse.Content.ReadFromJsonAsync<UserDto>(CustomWebApplicationFactory.JsonOptions);
+
+        var getResponse = await _client.GetAsync($"/api/users/{createdUser?.UserId}");
+        getResponse.EnsureSuccessStatusCode();
+        var fetchedUser = await getResponse.Content.ReadFromJsonAsync<UserDto>(CustomWebApplicationFactory.JsonOptions);
+
+        Assert.NotNull(fetchedUser);
+        Assert.NotNull(fetchedUser.Vehicles);
+    }
+
+    [Fact]
+    public async Task UpdateUser_WhenEmailAlreadyExists_ShouldReturnConflict()
+    {
+        var user1 = new CreateUserDto { Name = "User1", Email = "user1@email.com", Password = "password123", Role = UserRole.Admin };
+        var user2 = new CreateUserDto { Name = "User2", Email = "user2@email.com", Password = "password123", Role = UserRole.Admin };
+
+        await _client.PostAsync("/api/users", JsonContent.Create(user1, options: CustomWebApplicationFactory.JsonOptions));
+        var create2Response = await _client.PostAsync("/api/users", JsonContent.Create(user2, options: CustomWebApplicationFactory.JsonOptions));
+        var createdUser2 = await create2Response.Content.ReadFromJsonAsync<UserDto>(CustomWebApplicationFactory.JsonOptions);
+
+        var updateDto = new UpdateUserDto { Email = "user1@email.com" };
+        var response = await _client.PatchAsync($"/api/users/{createdUser2?.UserId}", JsonContent.Create(updateDto, options: CustomWebApplicationFactory.JsonOptions));
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task DeleteUser_WhenNotFound_ShouldReturnNotFound()
+    {
+        var response = await _client.DeleteAsync($"/api/users/{Guid.NewGuid()}");
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetUserByName_ShouldReturnUser()
+    {
+        var newUser = new CreateUserDto { Name = "Ricardo", Email = "ricardo@email.com", Password = "password123", Role = UserRole.Admin };
+        await _client.PostAsync("/api/users", JsonContent.Create(newUser, options: CustomWebApplicationFactory.JsonOptions));
+
+        var response = await _client.GetAsync("/api/users/by-name/Ricardo");
+        response.EnsureSuccessStatusCode();
+        var user = await response.Content.ReadFromJsonAsync<UserDto>(CustomWebApplicationFactory.JsonOptions);
+
+        Assert.NotNull(user);
+        Assert.Equal("Ricardo", user.Name);
+    }
+
+    [Fact]
+    public async Task GetUserByName_WhenNotFound_ShouldReturnNotFound()
+    {
+        var response = await _client.GetAsync("/api/users/by-name/Inexistente");
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
 }
