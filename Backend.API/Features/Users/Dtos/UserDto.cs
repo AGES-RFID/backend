@@ -23,7 +23,17 @@ public class UserDto
         CreatedAt = user.CreatedAt,
         UpdatedAt = user.UpdatedAt,
         Balance = user.Balance,
-        Vehicles = user.Vehicles
+        Vehicles = user.Vehicles.Select(v => new Vehicle
+        {
+            UserId = v.UserId,
+            VehicleId = v.VehicleId,
+            Plate = v.Plate,
+            Brand = v.Brand,
+            Model = v.Model,
+            TagId = v.TagId,
+            CreatedAt = v.CreatedAt,
+            UpdatedAt = v.UpdatedAt
+        }).ToList()
     };
 
 }

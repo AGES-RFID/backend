@@ -30,7 +30,9 @@ public class UserService(AppDbContext db) : IUserService
 
     public async Task<UserDto> GetUserAsync(Guid id)
     {
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.UserId == id)
+        var user = await _db.Users
+        .Include(u => u.Vehicles)
+        .FirstOrDefaultAsync(u => u.UserId == id)
             ?? throw new KeyNotFoundException($"Usuário com o id {id} não foi encontrado");
 
         return UserDto.FromModel(user);
