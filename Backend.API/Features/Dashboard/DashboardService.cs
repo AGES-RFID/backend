@@ -16,22 +16,14 @@ public class DashboardService(AppDbContext db) : IDashboardService
 
     public async Task<OccupancyDto> GetOccupancyAsync()
     {
-        var tagIdsInside = await _db.Accesses
-            .AsNoTracking()
-            .GroupBy(a => a.TagId)
-            .Select(g => new
-            {
-                TagId = g.Key,
-                LastType = g.OrderByDescending(a => a.Timestamp).First().Type
-            })
-            .Where(x => x.LastType == AccessType.ENTRY)
-            .Select(x => x.TagId)
-            .ToListAsync();
-
         var vehicles = await _db.Vehicles
             .AsNoTracking()
             .Include(v => v.User)
-            .Where(v => v.TagId != null && tagIdsInside.Contains(v.TagId))
+            .Where(v => v.TagId != null && _db.Accesses
+                .Where(a => a.TagId == v.TagId)
+                .OrderByDescending(a => a.Timestamp)
+                .Select(a => a.Type)
+                .FirstOrDefault() == AccessType.ENTRY)
             .ToListAsync();
 
         var vehicleDtos = vehicles.Select(VehicleDto.FromModel).ToList();
