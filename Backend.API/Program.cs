@@ -87,6 +87,7 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IVehicleService, VehicleService>();
 builder.Services.AddScoped<ITagService, TagService>();
+builder.Services.AddScoped<IAccessService, AccessService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 
 // Configure JWT Authentication
