@@ -17,9 +17,9 @@ public class TransactionConfiguration : IEntityTypeConfiguration<Transaction>
         builder.Property(t => t.Description)
             .IsRequired();
 
-         builder.Property(t => t.TransactionType)
-             .IsRequired()
-             .HasColumnType("transaction_type");
+        builder.Property(t => t.TransactionType)
+            .IsRequired()
+            .HasColumnType("transaction_type");
 
         builder.Property(t => t.Amount)
             .IsRequired()
