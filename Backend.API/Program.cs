@@ -8,6 +8,8 @@ using Microsoft.OpenApi;
 
 
 using Backend.Database;
+using Backend.Features.Dashboard;
+using Backend.Features.Accesses;
 using Backend.Features.Tags;
 using Backend.Features.Auth;
 using Backend.Features.Users;
@@ -77,6 +79,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     {
         o.MapEnum<UserRole>("user_role", "public");
         o.MapEnum<TransactionType>("transaction_type", "public");
+        o.MapEnum<AccessType>("access_type", "public");
     })
     .UseSnakeCaseNamingConvention()
 );
@@ -87,6 +90,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IVehicleService, VehicleService>();
 builder.Services.AddScoped<ITagService, TagService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
 
 // Configure JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>()
@@ -139,6 +143,8 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.MapGet("/api", () => Results.Ok(new { status = "ok", timestamp = DateTime.UtcNow }));
 app.MapControllers();
 
 
