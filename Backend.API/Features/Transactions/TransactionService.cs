@@ -19,7 +19,7 @@ public class TransactionService(AppDbContext db, IUserService userService) : ITr
     {
         var actor = await _userService.GetUserAsync(command.ActorUserId);
 
-        if (!(actor.Role == UserRole.Admin) && command.ActorUserId != command.TargetUserId)
+        if (actor.Role != UserRole.Admin && command.ActorUserId != command.TargetUserId)
             throw new UnauthorizedAccessException("Usuário não autorizado");
 
         var target = await _userService.GetUserAsync(command.TargetUserId)

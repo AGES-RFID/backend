@@ -26,7 +26,6 @@ public class TransactionsController(ITransactionService transactionService) : Co
         if (!Guid.TryParse(sub, out var actorUserId))
             return Unauthorized();
 
-        var isAdmin = User.IsInRole(UserRole.Admin.ToString());
         var targetUserId = dto.UserId ?? actorUserId;
 
         var command = new CreateTransactionCommand
