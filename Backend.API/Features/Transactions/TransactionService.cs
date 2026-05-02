@@ -1,5 +1,3 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
 using Backend.Database;
 using Backend.Features.Users;
 using Backend.Features.Transactions;
@@ -9,46 +7,34 @@ namespace Backend.Features.Transactions;
 
 public interface ITransactionService
 {
-    Task<TransactionResponseDto> CreateTransactionAsync(CreateTransactionDto dto);
+    Task<TransactionDto> CreateTransactionAsync(CreateTransactionCommand command);
 }
 
-public class TransactionService(AppDbContext db, IHttpContextAccessor httpContextAccessor, IUserService userService) : ITransactionService
+public class TransactionService(AppDbContext db, IUserService userService) : ITransactionService
 {
     private readonly AppDbContext _db = db;
-    private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
     private readonly IUserService _userService = userService;
 
-    public async Task<TransactionResponseDto> CreateTransactionAsync(CreateTransactionDto dto)
+    public async Task<TransactionDto> CreateTransactionAsync(CreateTransactionCommand command)
     {
-        var sub = _httpContextAccessor.HttpContext?.User.FindFirstValue(JwtRegisteredClaimNames.Sub);
-        if (!Guid.TryParse(sub, out var userId))
-            throw new InvalidOperationException("Token inválido");
+        var actor = await _userService.GetUserAsync(command.ActorUserId);
 
-        var user = await _userService.GetUserAsync(userId);
-        if (user == null)
-            throw new InvalidOperationException("Usuário não encontrado");
+        if (!(actor.Role == UserRole.Admin) && command.ActorUserId != command.TargetUserId)
+            throw new UnauthorizedAccessException("Usuário não autorizado");
+
+        var target = await _userService.GetUserAsync(command.TargetUserId)
+            ?? throw new InvalidOperationException("Usuário não encontrado");
 
         var transaction = await _db.Transactions.AddAsync(new Transaction
         {
-            TransactionId = Guid.NewGuid(),
-            UserId = user.UserId,
-            Description = dto.Description,
-            Amount = dto.Amount,
+            UserId = target.UserId,
+            Description = command.Description,
+            Amount = command.Amount,
             TransactionType = TransactionType.DEPOSIT,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
         });
 
         await _db.SaveChangesAsync();
 
-        return new TransactionResponseDto
-        {
-            TransactionId = transaction.Entity.TransactionId,
-            UserId = transaction.Entity.UserId,
-            Amount = transaction.Entity.Amount,
-            Description = transaction.Entity.Description,
-            TransactionType = transaction.Entity.TransactionType,
-            CreatedAt = transaction.Entity.CreatedAt
-        };
+        return TransactionDto.FromModel(transaction.Entity);
     }
 }

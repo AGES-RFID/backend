@@ -1,14 +1,14 @@
 using System.ComponentModel.DataAnnotations;
-using Backend.Features.Transactions;
 
-public class CreateTransactionDto
+namespace Backend.Features.Transactions;
+
+public class CreateTransactionRequestDto
 {
-    [Required]
-    public required Guid UserId { get; set; }
-    
+    public Guid? UserId { get; set; }
+
     [MinLength(1)]
     public required string Description { get; set; }
-        
+
     [Required]
     [Range(0.01, double.MaxValue)]
     public required decimal Amount { get; set; }
