@@ -5,20 +5,16 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
-using Backend.Features.Accesses;
-using Backend.Features.Transactions;
-
 
 using Backend.Database;
-using Backend.Features.Dashboard;
-using Backend.Features.Accesses;
+using Backend.Configuration;
 using Backend.Features.Tags;
 using Backend.Features.Auth;
 using Backend.Features.Users;
 using Backend.Features.Vehicles;
-using Backend.Features.Transactions;
-using Backend.Configuration;
 using Backend.Features.Dashboard;
+using Backend.Features.Transactions;
+using Backend.Features.Accesses;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -94,6 +90,7 @@ builder.Services.AddScoped<IVehicleService, VehicleService>();
 builder.Services.AddScoped<ITagService, TagService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
+builder.Services.AddScoped<IAccessesService, AccessesService>();
 
 // Configure JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>()

@@ -50,7 +50,7 @@ public class DashboardServiceTests
 
         db.Accesses.Add(CreateAccess("TAG001", AccessType.Entry, now.AddMinutes(-10)));
         db.Accesses.Add(CreateAccess("TAG002", AccessType.Entry, now.AddMinutes(-30)));
-        db.Accesses.Add(CreateAccess("TAG003", AccessType.Entry, now.AddHours(-2))); // fora da janela
+        db.Accesses.Add(CreateAccess("TAG003", AccessType.Entry, now.AddHours(-2)));
         await db.SaveChangesAsync();
 
         var service = new DashboardService(db);
@@ -67,7 +67,7 @@ public class DashboardServiceTests
 
         db.Accesses.Add(CreateAccess("TAG001", AccessType.Exit, now.AddMinutes(-15)));
         db.Accesses.Add(CreateAccess("TAG002", AccessType.Exit, now.AddMinutes(-45)));
-        db.Accesses.Add(CreateAccess("TAG003", AccessType.Exit, now.AddHours(-3))); // fora da janela
+        db.Accesses.Add(CreateAccess("TAG003", AccessType.Exit, now.AddHours(-3)));
         await db.SaveChangesAsync();
 
         var service = new DashboardService(db);
@@ -81,12 +81,12 @@ public class DashboardServiceTests
     {
         var db = CreateInMemoryDb();
         var now = DateTime.UtcNow;
-        var peakHour = now.AddHours(-2);
+        var peakHour = new DateTime(now.Year, now.Month, now.Day, now.Hour, 0, 0, DateTimeKind.Utc).AddHours(-2);
 
         db.Accesses.Add(CreateAccess("TAG001", AccessType.Entry, peakHour));
         db.Accesses.Add(CreateAccess("TAG002", AccessType.Entry, peakHour.AddMinutes(10)));
         db.Accesses.Add(CreateAccess("TAG003", AccessType.Entry, peakHour.AddMinutes(20)));
-        db.Accesses.Add(CreateAccess("TAG004", AccessType.Entry, now.AddMinutes(-5))); // ✅ dentro da última hora
+        db.Accesses.Add(CreateAccess("TAG004", AccessType.Entry, now.AddMinutes(-5)));
         await db.SaveChangesAsync();
 
         var service = new DashboardService(db);
