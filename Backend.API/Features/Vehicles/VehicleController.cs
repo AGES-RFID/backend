@@ -10,7 +10,10 @@ public class VehiclesController(IVehicleService vehicleService) : ControllerBase
     public object? Result;
 
     [HttpGet]
+    [ProducesResponseType(typeof(VehicleWithOwnerDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(VehicleDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<IEnumerable<VehicleDto>>> GetAllVehicles([FromQuery] string? include = null)
+
     {
         if (!TryParseInclude(include, out var includeUsers))
         {

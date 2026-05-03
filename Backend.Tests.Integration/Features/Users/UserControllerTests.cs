@@ -1,12 +1,16 @@
 using System.Net;
 using System.Net.Http.Json;
-using tests.Setup;
+using Backend.Database;
+using Backend.Features.Transactions;
 using Backend.Features.Users;
+using Microsoft.Extensions.DependencyInjection;
+using tests.Setup;
 
 namespace tests.Features.Users;
 
 public class UserControllerTests(CustomWebApplicationFactory factory) : IClassFixture<CustomWebApplicationFactory>, IAsyncLifetime
 {
+    private readonly CustomWebApplicationFactory _factory = factory;
     private readonly HttpClient _client = factory.CreateClient();
 
     public async Task InitializeAsync()
@@ -62,6 +66,44 @@ public class UserControllerTests(CustomWebApplicationFactory factory) : IClassFi
         Assert.Equal(createdUser?.UserId, fetchedUser.UserId);
         Assert.Equal(createdUser?.Name, fetchedUser.Name);
         Assert.Equal(createdUser?.Email, fetchedUser.Email);
+    }
+
+    [Fact]
+    public async Task GetUser_ShouldReturnBalanceFromTransactions()
+    {
+        var newUser = new CreateUserDto { Name = "Balance User", Email = "balance@email.com", Password = "password123", Role = UserRole.Admin };
+
+        var createResponse = await _client.PostAsync("/api/users", JsonContent.Create(newUser, options: CustomWebApplicationFactory.JsonOptions));
+        createResponse.EnsureSuccessStatusCode();
+        var createdUser = await createResponse.Content.ReadFromJsonAsync<UserDto>(CustomWebApplicationFactory.JsonOptions);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.Transactions.AddRange(
+                new Transaction
+                {
+                    UserId = createdUser!.UserId,
+                    Amount = 100m,
+                    Description = "Initial deposit",
+                    TransactionType = TransactionType.DEPOSIT
+                },
+                new Transaction
+                {
+                    UserId = createdUser.UserId,
+                    Amount = 30m,
+                    Description = "Withdrawal",
+                    TransactionType = TransactionType.WITHDRAWAL
+                });
+            await db.SaveChangesAsync();
+        }
+
+        var getResponse = await _client.GetAsync($"/api/users/{createdUser?.UserId}");
+        getResponse.EnsureSuccessStatusCode();
+        var fetchedUser = await getResponse.Content.ReadFromJsonAsync<UserWithVehiclesDto>(CustomWebApplicationFactory.JsonOptions);
+
+        Assert.NotNull(fetchedUser);
+        Assert.Equal(70m, fetchedUser.Balance);
     }
 
     [Fact]
@@ -154,5 +196,64 @@ public class UserControllerTests(CustomWebApplicationFactory factory) : IClassFi
         Assert.Equal("User", updatedUser?.Name);
         Assert.Equal("user@email.com", updatedUser?.Email);
         Assert.Equal(UserRole.Customer, updatedUser?.Role);
+    }
+
+    [Fact]
+    public async Task GetUser_ShouldReturnVehiclesWhenUserHasVehicles()
+    {
+        var newUser = new CreateUserDto { Name = "Ricardo", Email = "ricardo@email.com", Password = "password123", Role = UserRole.Admin };
+        var createResponse = await _client.PostAsync("/api/users", JsonContent.Create(newUser, options: CustomWebApplicationFactory.JsonOptions));
+        var createdUser = await createResponse.Content.ReadFromJsonAsync<UserDto>(CustomWebApplicationFactory.JsonOptions);
+
+        var getResponse = await _client.GetAsync($"/api/users/{createdUser?.UserId}");
+        getResponse.EnsureSuccessStatusCode();
+        var fetchedUser = await getResponse.Content.ReadFromJsonAsync<UserWithVehiclesDto>(CustomWebApplicationFactory.JsonOptions);
+
+        Assert.NotNull(fetchedUser);
+        Assert.NotNull(fetchedUser.Vehicles);
+    }
+
+    [Fact]
+    public async Task UpdateUser_WhenEmailAlreadyExists_ShouldReturnConflict()
+    {
+        var user1 = new CreateUserDto { Name = "User1", Email = "user1@email.com", Password = "password123", Role = UserRole.Admin };
+        var user2 = new CreateUserDto { Name = "User2", Email = "user2@email.com", Password = "password123", Role = UserRole.Admin };
+
+        await _client.PostAsync("/api/users", JsonContent.Create(user1, options: CustomWebApplicationFactory.JsonOptions));
+        var create2Response = await _client.PostAsync("/api/users", JsonContent.Create(user2, options: CustomWebApplicationFactory.JsonOptions));
+        var createdUser2 = await create2Response.Content.ReadFromJsonAsync<UserDto>(CustomWebApplicationFactory.JsonOptions);
+
+        var updateDto = new UpdateUserDto { Email = "user1@email.com" };
+        var response = await _client.PatchAsync($"/api/users/{createdUser2?.UserId}", JsonContent.Create(updateDto, options: CustomWebApplicationFactory.JsonOptions));
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task DeleteUser_WhenNotFound_ShouldReturnNotFound()
+    {
+        var response = await _client.DeleteAsync($"/api/users/{Guid.NewGuid()}");
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetUserByName_ShouldReturnUser()
+    {
+        var newUser = new CreateUserDto { Name = "Ricardo", Email = "ricardo@email.com", Password = "password123", Role = UserRole.Admin };
+        await _client.PostAsync("/api/users", JsonContent.Create(newUser, options: CustomWebApplicationFactory.JsonOptions));
+
+        var response = await _client.GetAsync("/api/users/by-name/Ricardo");
+        response.EnsureSuccessStatusCode();
+        var user = await response.Content.ReadFromJsonAsync<UserDto>(CustomWebApplicationFactory.JsonOptions);
+
+        Assert.NotNull(user);
+        Assert.Equal("Ricardo", user.Name);
+    }
+
+    [Fact]
+    public async Task GetUserByName_WhenNotFound_ShouldReturnNotFound()
+    {
+        var response = await _client.GetAsync("/api/users/by-name/Inexistente");
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 }

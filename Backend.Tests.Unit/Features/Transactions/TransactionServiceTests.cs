@@ -17,7 +17,7 @@ public class TransactionServiceTests
         return new AppDbContext(options);
     }
 
-    private static UserDto CreateUserDto(Guid userId, UserRole role = UserRole.Customer)
+    private static UserWithVehiclesDto CreateUserDto(Guid userId, UserRole role = UserRole.Customer)
         => new()
         {
             UserId = userId,

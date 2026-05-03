@@ -9,14 +9,14 @@ public class UsersController(IUserService userService) : ControllerBase
     private readonly IUserService _userService = userService;
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<UserDto>>> GetAllUsers()
+    public async Task<ActionResult<IEnumerable<UserWithVehiclesDto>>> GetAllUsers()
     {
         var users = await _userService.GetAllUsersAsync();
         return Ok(users);
     }
 
     [HttpGet("by-name/{name}")]
-    public async Task<ActionResult<UserDto>> GetUserByName(string name)
+    public async Task<ActionResult<UserWithVehiclesDto>> GetUserByName(string name)
     {
         try
         {
@@ -30,7 +30,7 @@ public class UsersController(IUserService userService) : ControllerBase
     }
 
     [HttpGet("{userId}")]
-    public async Task<ActionResult<UserDto>> GetUser(Guid userId)
+    public async Task<ActionResult<UserWithVehiclesDto>> GetUser(Guid userId)
     {
         try
         {

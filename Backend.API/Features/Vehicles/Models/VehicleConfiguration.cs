@@ -15,7 +15,7 @@ public class VehicleConfiguration : IEntityTypeConfiguration<Vehicle>
         builder.HasIndex(v => v.TagId).IsUnique();
 
         builder.HasOne(v => v.User)
-               .WithMany()
+               .WithMany(u => u.Vehicles)
                .HasForeignKey(v => v.UserId)
                .OnDelete(DeleteBehavior.Cascade);
 

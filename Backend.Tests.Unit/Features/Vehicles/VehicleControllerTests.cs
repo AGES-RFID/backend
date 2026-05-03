@@ -45,9 +45,9 @@ public class VehicleControllerTests
     [Fact]
     public async Task GetAllVehicles_WhenCalled_ReturnsOkWithList()
     {
-        var expectedList = new List<VehicleDto>
+        var expectedList = new List<VehicleWithOwnerDto>
         {
-            new VehicleDto { VehicleId = Guid.NewGuid(), Plate = "AAA0000", Brand = "Honda", Model = "Civic", UserId = Guid.NewGuid() }
+            new() { VehicleId = Guid.NewGuid(), Plate = "AAA0000", Brand = "Honda", Model = "Civic", UserId = Guid.NewGuid() }
         };
 
         var vehicleService = Substitute.For<IVehicleService>();
@@ -71,7 +71,7 @@ public class VehicleControllerTests
 
         var vehicleService = Substitute.For<IVehicleService>();
         vehicleService.GetVehicleAsync(VehicleId)
-            .Returns(Task.FromException<VehicleDto>(new BadHttpRequestException("Invalid or missing information.")));
+            .Returns(Task.FromException<VehicleWithOwnerDto>(new BadHttpRequestException("Invalid or missing information.")));
 
         var controller = new VehiclesController(vehicleService);
 
@@ -88,7 +88,7 @@ public class VehicleControllerTests
 
         var vehicleService = Substitute.For<IVehicleService>();
         vehicleService.GetVehicleAsync(VehicleId)
-            .Returns(Task.FromException<VehicleDto>(new KeyNotFoundException("Not Found")));
+            .Returns(Task.FromException<VehicleWithOwnerDto>(new KeyNotFoundException("Not Found")));
 
         var controller = new VehiclesController(vehicleService);
 
@@ -103,7 +103,7 @@ public class VehicleControllerTests
     {
         var vehicleId = Guid.NewGuid();
 
-        var expected = new VehicleDto
+        var expected = new VehicleWithOwnerDto
         {
             VehicleId = vehicleId,
             UserId = Guid.NewGuid(),
@@ -119,7 +119,7 @@ public class VehicleControllerTests
 
         var result = await controller.GetVehicle(vehicleId);
         var ok = Assert.IsType<OkObjectResult>(result.Result);
-        var dto = Assert.IsType<VehicleDto>(ok.Value);
+        var dto = Assert.IsType<VehicleWithOwnerDto>(ok.Value);
 
         Assert.Equal(expected.Plate, dto.Plate);
         Assert.Equal(expected.Model, dto.Model);

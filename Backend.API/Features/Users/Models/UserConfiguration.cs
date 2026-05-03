@@ -10,6 +10,8 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
     {
         builder.HasKey(u => u.UserId);
 
+        builder.HasMany(u => u.Vehicles).WithOne(v => v.User).HasForeignKey(v => v.UserId);
+
         builder.Property(u => u.Email)
             .IsRequired();
 

@@ -1,4 +1,6 @@
 using Backend.Database;
+using Backend.Features.Transactions;
+using Backend.Features.Vehicles;
 using Microsoft.EntityFrameworkCore;
 using BCrypt.Net;
 
@@ -16,9 +18,9 @@ public class EmailAlreadyExistsException : Exception
 
 public interface IUserService
 {
-    Task<UserDto> GetUserByNameAsync(string name);
-    Task<UserDto> GetUserAsync(Guid id);
-    Task<IEnumerable<UserDto>> GetAllUsersAsync();
+    Task<UserWithVehiclesDto> GetUserByNameAsync(string name);
+    Task<UserWithVehiclesDto> GetUserAsync(Guid id);
+    Task<IEnumerable<UserWithVehiclesDto>> GetAllUsersAsync();
     Task<UserDto> CreateUserAsync(CreateUserDto dto);
     Task<UserDto> UpdateUserAsync(Guid id, UpdateUserDto dto);
     Task DeleteUserAsync(Guid id);
@@ -28,25 +30,57 @@ public class UserService(AppDbContext db) : IUserService
 {
     private readonly AppDbContext _db = db;
 
-    public async Task<UserDto> GetUserAsync(Guid id)
+    public async Task<UserWithVehiclesDto> GetUserAsync(Guid id)
     {
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.UserId == id)
+        var user = await _db.Users
+            .AsNoTracking()
+            .Where(u => u.UserId == id)
+            .Include(u => u.Vehicles)
+            .Select(u =>
+                UserWithVehiclesDto.FromModel(
+                    u,
+                    _db.Transactions
+                    .Where(t => t.UserId == u.UserId)
+                    .Sum(t => t.TransactionType == TransactionType.DEPOSIT ? t.Amount : -t.Amount)
+                )
+            )
+            .FirstOrDefaultAsync()
             ?? throw new KeyNotFoundException($"Usuário com o id {id} não foi encontrado");
 
-        return UserDto.FromModel(user);
+        return user;
     }
 
-    public async Task<UserDto> GetUserByNameAsync(string name)
+    public async Task<UserWithVehiclesDto> GetUserByNameAsync(string name)
     {
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Name == name)
+        var user = await _db.Users
+            .AsNoTracking()
+            .Where(u => u.Name == name)
+            .Include(u => u.Vehicles)
+            .Select(u =>
+                UserWithVehiclesDto.FromModel(
+                    u,
+                    0
+                )
+            )
+            .FirstOrDefaultAsync()
             ?? throw new KeyNotFoundException($"Usuário com o nome {name} não foi encontrado");
 
-        return UserDto.FromModel(user);
+        return user;
     }
 
-    public async Task<IEnumerable<UserDto>> GetAllUsersAsync()
+    public async Task<IEnumerable<UserWithVehiclesDto>> GetAllUsersAsync()
     {
-        var users = await _db.Users.AsNoTracking().Select(u => UserDto.FromModel(u)).ToListAsync();
+        var users = await _db.Users
+            .AsNoTracking()
+            .Select(u =>
+                UserWithVehiclesDto.FromModel(
+                     u,
+                    _db.Transactions
+                    .Where(t => t.UserId == u.UserId)
+                    .Sum(t => t.TransactionType == TransactionType.DEPOSIT ? t.Amount : -t.Amount)
+                )
+            )
+            .ToListAsync();
 
         return users;
     }

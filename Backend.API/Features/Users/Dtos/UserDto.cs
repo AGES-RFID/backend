@@ -1,5 +1,7 @@
 namespace Backend.Features.Users;
 
+using Backend.Features.Vehicles;
+
 public class UserDto
 {
     public Guid UserId { get; set; }
@@ -8,9 +10,9 @@ public class UserDto
     public required UserRole Role { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+    public decimal Balance { get; set; }
 
-
-    public static UserDto FromModel(User user) => new()
+    public static UserDto FromModel(User user, decimal balance = 0m) => new()
     {
         UserId = user.UserId,
         Name = user.Name,
@@ -18,6 +20,7 @@ public class UserDto
         Role = user.Role,
         CreatedAt = user.CreatedAt,
         UpdatedAt = user.UpdatedAt,
+        Balance = balance,
     };
 
 }

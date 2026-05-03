@@ -1,5 +1,7 @@
 using Backend.Database;
+using Backend.Features.Transactions;
 using Backend.Features.Users;
+using Backend.Features.Vehicles;
 using Microsoft.EntityFrameworkCore;
 
 namespace Backend.Tests.Unit.Features.Users;
@@ -32,6 +34,34 @@ public class UserServiceTests
     }
 
     [Fact]
+    public async Task GetUserAsync_WhenUserHasTransactions_ReturnsBalance()
+    {
+        var db = CreateInMemoryDb();
+        var user = CreateUser();
+        db.Users.Add(user);
+        db.Transactions.AddRange(
+            new Transaction
+            {
+                UserId = user.UserId,
+                Amount = 100m,
+                Description = "Initial deposit",
+                TransactionType = TransactionType.DEPOSIT
+            },
+            new Transaction
+            {
+                UserId = user.UserId,
+                Amount = 25m,
+                Description = "Withdrawal",
+                TransactionType = TransactionType.WITHDRAWAL
+            });
+        await db.SaveChangesAsync();
+
+        var result = await new UserService(db).GetUserAsync(user.UserId);
+
+        Assert.Equal(75m, result.Balance);
+    }
+
+    [Fact]
     public async Task GetUserAsync_WhenNotFound_ThrowsKeyNotFoundException()
     {
         var db = CreateInMemoryDb();
@@ -56,6 +86,26 @@ public class UserServiceTests
     {
         var db = CreateInMemoryDb();
         await Assert.ThrowsAsync<KeyNotFoundException>(() => new UserService(db).GetUserByNameAsync("inexistente"));
+    }
+
+    [Fact]
+    public async Task GetUserByNameAsync_WhenUserHasVehicles_ReturnsVehicles()
+    {
+        var db = CreateInMemoryDb();
+        var user = CreateUser();
+        db.Users.Add(user);
+        db.Vehicles.Add(new Vehicle
+        {
+            UserId = user.UserId,
+            Plate = "XYZ1234",
+            Brand = "ford",
+            Model = "focus"
+        });
+        await db.SaveChangesAsync();
+
+        var result = await new UserService(db).GetUserByNameAsync(user.Name);
+
+        Assert.Single(result.Vehicles);
     }
 
     [Fact]
@@ -156,5 +206,68 @@ public class UserServiceTests
     {
         var db = CreateInMemoryDb();
         await Assert.ThrowsAsync<KeyNotFoundException>(() => new UserService(db).DeleteUserAsync(Guid.NewGuid()));
+    }
+
+    [Fact]
+    public async Task GetUserAsync_WhenUserExists_ReturnsVehicles()
+    {
+        var db = CreateInMemoryDb();
+        var user = CreateUser();
+        db.Users.Add(user);
+        db.Vehicles.Add(new Vehicle
+        {
+            UserId = user.UserId,
+            Plate = "ABC1234",
+            Brand = "toyota",
+            Model = "corolla"
+        });
+        await db.SaveChangesAsync();
+
+        var result = await new UserService(db).GetUserAsync(user.UserId);
+
+        Assert.Single(result.Vehicles);
+    }
+
+    [Fact]
+    public async Task GetUserAsync_WhenUserHasNoVehicles_ReturnsEmptyVehicles()
+    {
+        var db = CreateInMemoryDb();
+        var user = CreateUser();
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        var result = await new UserService(db).GetUserAsync(user.UserId);
+
+        Assert.Empty(result.Vehicles);
+    }
+
+    [Fact]
+    public async Task UpdateUserAsync_WhenOnlyNameProvided_UpdatesNameOnly()
+    {
+        var db = CreateInMemoryDb();
+        var user = CreateUser();
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        var dto = new UpdateUserDto { Name = "Novo Nome" };
+        var result = await new UserService(db).UpdateUserAsync(user.UserId, dto);
+
+        Assert.Equal("Novo Nome", result.Name);
+        Assert.Equal(user.Email, result.Email);
+    }
+
+    [Fact]
+    public async Task UpdateUserAsync_WhenOnlyRoleProvided_UpdatesRoleOnly()
+    {
+        var db = CreateInMemoryDb();
+        var user = CreateUser();
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        var dto = new UpdateUserDto { Role = UserRole.Customer };
+        var result = await new UserService(db).UpdateUserAsync(user.UserId, dto);
+
+        Assert.Equal(UserRole.Customer, result.Role);
+        Assert.Equal(user.Name, result.Name);
     }
 }
