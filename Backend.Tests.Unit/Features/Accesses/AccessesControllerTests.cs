@@ -46,6 +46,23 @@ public class AccessesControllerTests
     }
 
     [Fact]
+    public async Task RegisterEntry_WhenTagInactive_ReturnsConflict()
+    {
+
+        var dto = new CreateAccessDto { TagId = "TAG-003" };
+        var service = Substitute.For<IAccessesService>();
+        service.RegisterEntryAsync(dto).ThrowsAsync(new InvalidOperationException("Tag inactive"));
+
+        var controller = new AccessesController(service);
+
+
+        var result = await controller.RegisterEntry(dto);
+
+
+        Assert.IsType<ConflictObjectResult>(result.Result);
+    }
+
+    [Fact]
     public async Task RegisterExit_WhenAlreadyOutside_ReturnsConflict()
     {
 

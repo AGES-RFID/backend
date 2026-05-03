@@ -6,6 +6,7 @@ using Backend.Features.Tags;
 using Backend.Features.Tags.Enums;
 using Backend.Features.Users;
 using Backend.Features.Vehicles;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using tests.Setup;
 
@@ -23,7 +24,7 @@ public class AccessesControllerTests(CustomWebApplicationFactory factory) : ICla
 
     public Task DisposeAsync() => Task.CompletedTask;
 
-    private async Task SeedVehicleAndTagAsync(string tagId)
+    private async Task SeedVehicleAndTagAsync(string tagId, TagStatus status = TagStatus.IN_USE)
     {
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -31,10 +32,28 @@ public class AccessesControllerTests(CustomWebApplicationFactory factory) : ICla
         var user = new User { Name = "Test", Email = $"test_{Guid.NewGuid()}@example.com", PasswordHash = "hash", Role = UserRole.Customer };
         db.Users.Add(user);
 
-        var tag = new Tag { TagId = tagId, Status = TagStatus.IN_USE };
+        var tag = new Tag { TagId = tagId, Status = status };
         db.Tags.Add(tag);
 
         db.Vehicles.Add(new Vehicle { UserId = user.UserId, TagId = tagId, Plate = $"TST{Guid.NewGuid().ToString()[..4]}", Brand = "VW", Model = "Gol" });
+
+        await db.SaveChangesAsync();
+    }
+
+    private async Task SeedAccessAsync(string tagId, AccessType type)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var tag = await db.Tags.FirstAsync(t => t.TagId == tagId);
+
+        db.Accesses.Add(new Access
+        {
+            TagId = tagId,
+            Tag = tag,
+            Type = type,
+            Timestamp = DateTime.UtcNow.AddMinutes(-5)
+        });
 
         await db.SaveChangesAsync();
     }
@@ -122,5 +141,36 @@ public class AccessesControllerTests(CustomWebApplicationFactory factory) : ICla
 
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PostEntry_WithInactiveTag_ReturnsConflict()
+    {
+
+        var tagId = "INACTIVE-ENTRY-TAG";
+        await SeedVehicleAndTagAsync(tagId, TagStatus.INACTIVE);
+        var payload = new CreateAccessDto { TagId = tagId };
+
+
+        var response = await _client.PostAsync("/api/accesses/entry", JsonContent.Create(payload, options: CustomWebApplicationFactory.JsonOptions));
+
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PostExit_WithInactiveTag_ReturnsConflict()
+    {
+
+        var tagId = "INACTIVE-EXIT-TAG";
+        await SeedVehicleAndTagAsync(tagId, TagStatus.INACTIVE);
+        await SeedAccessAsync(tagId, AccessType.Entry);
+        var payload = new CreateAccessDto { TagId = tagId };
+
+
+        var response = await _client.PostAsync("/api/accesses/exit", JsonContent.Create(payload, options: CustomWebApplicationFactory.JsonOptions));
+
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
     }
 }

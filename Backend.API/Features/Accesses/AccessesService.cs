@@ -1,4 +1,5 @@
 using Backend.Database;
+using Backend.Features.Tags.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace Backend.Features.Accesses;
@@ -20,6 +21,9 @@ public class AccessesService(AppDbContext db) : IAccessesService
             .Include(t => t.Vehicle)
             .FirstOrDefaultAsync(t => t.TagId == dto.TagId)
             ?? throw new KeyNotFoundException("A tag informada não existe.");
+
+        if (tag.Status != TagStatus.IN_USE)
+            throw new InvalidOperationException("A tag informada não está ativa para acesso.");
 
         if (tag.Vehicle == null)
             throw new KeyNotFoundException("A tag informada não está vinculada a um veículo.");
@@ -55,6 +59,9 @@ public class AccessesService(AppDbContext db) : IAccessesService
             .Include(t => t.Vehicle)
             .FirstOrDefaultAsync(t => t.TagId == dto.TagId)
             ?? throw new KeyNotFoundException("A tag informada não existe.");
+
+        if (tag.Status != TagStatus.IN_USE)
+            throw new InvalidOperationException("A tag informada não está ativa para acesso.");
 
         if (tag.Vehicle == null)
             throw new KeyNotFoundException("A tag informada não está vinculada a um veículo.");
