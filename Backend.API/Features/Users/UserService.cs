@@ -1,4 +1,6 @@
 using Backend.Database;
+using Backend.Features.Transactions;
+using Backend.Features.Vehicles;
 using Microsoft.EntityFrameworkCore;
 using BCrypt.Net;
 
@@ -31,27 +33,53 @@ public class UserService(AppDbContext db) : IUserService
     public async Task<UserWithVehiclesDto> GetUserAsync(Guid id)
     {
         var user = await _db.Users
-        .Include(u => u.Vehicles)
-        .FirstOrDefaultAsync(u => u.UserId == id)
+            .AsNoTracking()
+            .Where(u => u.UserId == id)
+            .Include(u => u.Vehicles)
+            .Select(u =>
+                UserWithVehiclesDto.FromModel(
+                    u,
+                    _db.Transactions
+                    .Where(t => t.UserId == u.UserId)
+                    .Sum(t => t.TransactionType == TransactionType.DEPOSIT ? t.Amount : -t.Amount)
+                )
+            )
+            .FirstOrDefaultAsync()
             ?? throw new KeyNotFoundException($"Usuário com o id {id} não foi encontrado");
 
-        return UserWithVehiclesDto.FromModel(user);
+        return user;
     }
 
     public async Task<UserWithVehiclesDto> GetUserByNameAsync(string name)
     {
-        var user = await _db.Users.Include(u => u.Vehicles).FirstOrDefaultAsync(u => u.Name == name)
+        var user = await _db.Users
+            .AsNoTracking()
+            .Where(u => u.Name == name)
+            .Include(u => u.Vehicles)
+            .Select(u =>
+                UserWithVehiclesDto.FromModel(
+                    u,
+                    0
+                )
+            )
+            .FirstOrDefaultAsync()
             ?? throw new KeyNotFoundException($"Usuário com o nome {name} não foi encontrado");
 
-        return UserWithVehiclesDto.FromModel(user);
+        return user;
     }
 
     public async Task<IEnumerable<UserWithVehiclesDto>> GetAllUsersAsync()
     {
         var users = await _db.Users
             .AsNoTracking()
-            .Include(u => u.Vehicles)
-            .Select(u => UserWithVehiclesDto.FromModel(u))
+            .Select(u =>
+                UserWithVehiclesDto.FromModel(
+                     u,
+                    _db.Transactions
+                    .Where(t => t.UserId == u.UserId)
+                    .Sum(t => t.TransactionType == TransactionType.DEPOSIT ? t.Amount : -t.Amount)
+                )
+            )
             .ToListAsync();
 
         return users;

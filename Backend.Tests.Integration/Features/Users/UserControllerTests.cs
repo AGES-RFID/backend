@@ -1,12 +1,16 @@
 using System.Net;
 using System.Net.Http.Json;
-using tests.Setup;
+using Backend.Database;
+using Backend.Features.Transactions;
 using Backend.Features.Users;
+using Microsoft.Extensions.DependencyInjection;
+using tests.Setup;
 
 namespace tests.Features.Users;
 
 public class UserControllerTests(CustomWebApplicationFactory factory) : IClassFixture<CustomWebApplicationFactory>, IAsyncLifetime
 {
+    private readonly CustomWebApplicationFactory _factory = factory;
     private readonly HttpClient _client = factory.CreateClient();
 
     public async Task InitializeAsync()
@@ -62,6 +66,44 @@ public class UserControllerTests(CustomWebApplicationFactory factory) : IClassFi
         Assert.Equal(createdUser?.UserId, fetchedUser.UserId);
         Assert.Equal(createdUser?.Name, fetchedUser.Name);
         Assert.Equal(createdUser?.Email, fetchedUser.Email);
+    }
+
+    [Fact]
+    public async Task GetUser_ShouldReturnBalanceFromTransactions()
+    {
+        var newUser = new CreateUserDto { Name = "Balance User", Email = "balance@email.com", Password = "password123", Role = UserRole.Admin };
+
+        var createResponse = await _client.PostAsync("/api/users", JsonContent.Create(newUser, options: CustomWebApplicationFactory.JsonOptions));
+        createResponse.EnsureSuccessStatusCode();
+        var createdUser = await createResponse.Content.ReadFromJsonAsync<UserDto>(CustomWebApplicationFactory.JsonOptions);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.Transactions.AddRange(
+                new Transaction
+                {
+                    UserId = createdUser!.UserId,
+                    Amount = 100m,
+                    Description = "Initial deposit",
+                    TransactionType = TransactionType.DEPOSIT
+                },
+                new Transaction
+                {
+                    UserId = createdUser.UserId,
+                    Amount = 30m,
+                    Description = "Withdrawal",
+                    TransactionType = TransactionType.WITHDRAWAL
+                });
+            await db.SaveChangesAsync();
+        }
+
+        var getResponse = await _client.GetAsync($"/api/users/{createdUser?.UserId}");
+        getResponse.EnsureSuccessStatusCode();
+        var fetchedUser = await getResponse.Content.ReadFromJsonAsync<UserWithVehiclesDto>(CustomWebApplicationFactory.JsonOptions);
+
+        Assert.NotNull(fetchedUser);
+        Assert.Equal(70m, fetchedUser.Balance);
     }
 
     [Fact]
