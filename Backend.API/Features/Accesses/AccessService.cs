@@ -17,7 +17,7 @@ public class AccessService(AppDbContext context) : IAccessService
         {
             tag = new Tag
             {
-                TagId = dto.Epc,
+                TagId = dto.Tid,
                 Epc = dto.Epc
             };
             _context.Tags.Add(tag);
@@ -31,7 +31,7 @@ public class AccessService(AppDbContext context) : IAccessService
             TagId = tag.TagId,
             Type = accessType,
             Tag = tag,
-            Timestamp = dto.Timestamp
+            Timestamp = dto.Timestamp.ToUniversalTime()
         };
 
         _context.Accesses.Add(access);
@@ -45,5 +45,22 @@ public class AccessService(AppDbContext context) : IAccessService
             Type = accessType.ToString(),
             Timestamp = access.Timestamp
         };
+    }
+
+    public async Task<IEnumerable<AccessDto>> GetAllAccessesAsync()
+    {
+        var accesses = await _context.Accesses
+            .Include(a => a.Tag)
+            .OrderByDescending(a => a.Timestamp)
+            .ToListAsync();
+
+        return accesses.Select(access => new AccessDto
+        {
+            AccessId = access.AccessId,
+            TagId = access.TagId,
+            Epc = access.Tag.Epc,
+            Type = access.Type.ToString(),
+            Timestamp = access.Timestamp
+        });
     }
 }

@@ -27,4 +27,18 @@ public class AccessController(IAccessService accessService) : ControllerBase
             return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred while creating the access");
         }
     }
+
+    [HttpGet]
+    public async Task<ActionResult<IEnumerable<AccessDto>>> GetAllAccesses()
+    {
+        try
+        {
+            var accesses = await _accessService.GetAllAccessesAsync();
+            return Ok(accesses);
+        }
+        catch (Exception)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred while retrieving accesses");
+        }
+    }
 }
