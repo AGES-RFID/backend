@@ -68,7 +68,7 @@ public class DashboardControllerTests
 
         var result = await controller.GetOccupancy();
 
-        var statusResult = Assert.IsType<StatusCodeResult>(result.Result);
+        var statusResult = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(500, statusResult.StatusCode);
     }
 

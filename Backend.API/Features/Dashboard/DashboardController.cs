@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Backend.Features.Dashboard;
@@ -18,7 +19,7 @@ public class DashboardController(IDashboardService dashboardService) : Controlle
         }
         catch (Exception)
         {
-            return StatusCode(500, new { error = "Erro interno ao calcular ocupação" });
+            return Problem();
         }
     }
 
@@ -32,7 +33,7 @@ public class DashboardController(IDashboardService dashboardService) : Controlle
         }
         catch (Exception)
         {
-            return StatusCode(500, new { error = "Erro interno ao calcular métricas" });
+            return Problem();
         }
     }
 }
