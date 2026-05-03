@@ -16,9 +16,9 @@ public class EmailAlreadyExistsException : Exception
 
 public interface IUserService
 {
-    Task<UserDto> GetUserByNameAsync(string name);
-    Task<UserDto> GetUserAsync(Guid id);
-    Task<IEnumerable<UserDto>> GetAllUsersAsync();
+    Task<UserWithVehiclesDto> GetUserByNameAsync(string name);
+    Task<UserWithVehiclesDto> GetUserAsync(Guid id);
+    Task<IEnumerable<UserWithVehiclesDto>> GetAllUsersAsync();
     Task<UserDto> CreateUserAsync(CreateUserDto dto);
     Task<UserDto> UpdateUserAsync(Guid id, UpdateUserDto dto);
     Task DeleteUserAsync(Guid id);
@@ -28,27 +28,31 @@ public class UserService(AppDbContext db) : IUserService
 {
     private readonly AppDbContext _db = db;
 
-    public async Task<UserDto> GetUserAsync(Guid id)
+    public async Task<UserWithVehiclesDto> GetUserAsync(Guid id)
     {
         var user = await _db.Users
         .Include(u => u.Vehicles)
         .FirstOrDefaultAsync(u => u.UserId == id)
             ?? throw new KeyNotFoundException($"Usuário com o id {id} não foi encontrado");
 
-        return UserDto.FromModel(user);
+        return UserWithVehiclesDto.FromModel(user);
     }
 
-    public async Task<UserDto> GetUserByNameAsync(string name)
+    public async Task<UserWithVehiclesDto> GetUserByNameAsync(string name)
     {
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Name == name)
+        var user = await _db.Users.Include(u => u.Vehicles).FirstOrDefaultAsync(u => u.Name == name)
             ?? throw new KeyNotFoundException($"Usuário com o nome {name} não foi encontrado");
 
-        return UserDto.FromModel(user);
+        return UserWithVehiclesDto.FromModel(user);
     }
 
-    public async Task<IEnumerable<UserDto>> GetAllUsersAsync()
+    public async Task<IEnumerable<UserWithVehiclesDto>> GetAllUsersAsync()
     {
-        var users = await _db.Users.AsNoTracking().Select(u => UserDto.FromModel(u)).ToListAsync();
+        var users = await _db.Users
+            .AsNoTracking()
+            .Include(u => u.Vehicles)
+            .Select(u => UserWithVehiclesDto.FromModel(u))
+            .ToListAsync();
 
         return users;
     }

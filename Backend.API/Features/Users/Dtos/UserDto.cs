@@ -11,10 +11,8 @@ public class UserDto
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public decimal Balance { get; set; }
-    public ICollection<Vehicle> Vehicles { get; set; } = [];
 
-
-    public static UserDto FromModel(User user) => new()
+    public static UserDto FromModel(User user, decimal balance = 0m) => new()
     {
         UserId = user.UserId,
         Name = user.Name,
@@ -22,18 +20,7 @@ public class UserDto
         Role = user.Role,
         CreatedAt = user.CreatedAt,
         UpdatedAt = user.UpdatedAt,
-        Balance = user.Balance,
-        Vehicles = user.Vehicles.Select(v => new Vehicle
-        {
-            UserId = v.UserId,
-            VehicleId = v.VehicleId,
-            Plate = v.Plate,
-            Brand = v.Brand,
-            Model = v.Model,
-            TagId = v.TagId,
-            CreatedAt = v.CreatedAt,
-            UpdatedAt = v.UpdatedAt
-        }).ToList()
+        Balance = balance,
     };
 
 }

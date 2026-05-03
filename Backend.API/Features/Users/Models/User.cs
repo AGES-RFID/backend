@@ -10,6 +10,6 @@ public class User
     public required UserRole Role { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
-    public decimal Balance { get; set; }
+
     public ICollection<Vehicle> Vehicles { get; set; } = [];
 }

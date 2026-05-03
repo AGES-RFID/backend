@@ -10,6 +10,8 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
     {
         builder.HasKey(u => u.UserId);
 
+        builder.HasMany(u => u.Vehicles).WithOne(v => v.User).HasForeignKey(v => v.UserId);
+
         builder.Property(u => u.Email)
             .IsRequired();
 
@@ -25,9 +27,6 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.Role)
             .IsRequired()
             .HasColumnType("user_role");
-
-        builder.Property(u => u.Balance)
-            .HasColumnType("decimal(38, 2)");
 
         builder.Property(u => u.CreatedAt)
             .IsRequired()

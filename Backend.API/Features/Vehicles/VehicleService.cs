@@ -4,8 +4,8 @@ namespace Backend.Features.Vehicles;
 
 public interface IVehicleService
 {
-    Task<VehicleDto> GetVehicleAsync(Guid vehicleId);
-    Task<IEnumerable<VehicleDto>> GetAllVehiclesAsync(bool includeUsers);
+    Task<VehicleWithOwnerDto> GetVehicleAsync(Guid vehicleId);
+    Task<IEnumerable<VehicleWithOwnerDto>> GetAllVehiclesAsync(bool includeUsers);
     Task<VehicleDto> CreateVehicleAsync(CreateVehicleDto dto);
     Task<VehicleDto> UpdateVehicleAsync(Guid id, CreateVehicleDto dto);
     Task DeleteVehicleAsync(Guid id);
@@ -41,7 +41,7 @@ public class VehicleService(AppDbContext db) : IVehicleService
         return VehicleDto.FromModel(vehicle.Entity);
     }
 
-    public async Task<IEnumerable<VehicleDto>> GetAllVehiclesAsync(bool includeUsers)
+    public async Task<IEnumerable<VehicleWithOwnerDto>> GetAllVehiclesAsync(bool includeUsers)
     {
         var query = _db.Vehicles.AsNoTracking();
         if (includeUsers)
@@ -50,18 +50,18 @@ public class VehicleService(AppDbContext db) : IVehicleService
         }
 
         var vehicles = await query
-            .Select(v => VehicleDto.FromModel(v))
+            .Select(v => VehicleWithOwnerDto.FromModel(v))
             .ToListAsync();
 
         return vehicles;
     }
 
-    public async Task<VehicleDto> GetVehicleAsync(Guid vehicleId)
+    public async Task<VehicleWithOwnerDto> GetVehicleAsync(Guid vehicleId)
     {
         var vehicle = await _db.Vehicles.FirstOrDefaultAsync(v => v.VehicleId == vehicleId)
             ?? throw new KeyNotFoundException($"Vehicle with id {vehicleId} not found");
 
-        return VehicleDto.FromModel(vehicle);
+        return VehicleWithOwnerDto.FromModel(vehicle);
     }
 
     public async Task<VehicleSearchResponseDto> GetVehicleByPlateAsync(string plate)

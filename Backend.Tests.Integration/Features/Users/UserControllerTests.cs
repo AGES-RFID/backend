@@ -165,7 +165,7 @@ public class UserControllerTests(CustomWebApplicationFactory factory) : IClassFi
 
         var getResponse = await _client.GetAsync($"/api/users/{createdUser?.UserId}");
         getResponse.EnsureSuccessStatusCode();
-        var fetchedUser = await getResponse.Content.ReadFromJsonAsync<UserDto>(CustomWebApplicationFactory.JsonOptions);
+        var fetchedUser = await getResponse.Content.ReadFromJsonAsync<UserWithVehiclesDto>(CustomWebApplicationFactory.JsonOptions);
 
         Assert.NotNull(fetchedUser);
         Assert.NotNull(fetchedUser.Vehicles);

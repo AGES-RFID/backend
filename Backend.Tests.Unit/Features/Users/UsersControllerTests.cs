@@ -12,7 +12,7 @@ public class UsersControllerTests
         var userId = Guid.NewGuid();
         var userService = Substitute.For<IUserService>();
         userService.GetUserAsync(userId)
-            .Returns(Task.FromException<UserDto>(new KeyNotFoundException("not found")));
+            .Returns(Task.FromException<UserWithVehiclesDto>(new KeyNotFoundException("not found")));
 
         var controller = new UsersController(userService);
         var result = await controller.GetUser(userId);
@@ -25,7 +25,7 @@ public class UsersControllerTests
     public async Task GetUser_WhenServiceReturnsUser_ReturnsOkWithUser()
     {
         var userId = Guid.NewGuid();
-        var expected = new UserDto { UserId = userId, Name = "Alice", Email = "alice@example.com", Role = UserRole.Admin };
+        var expected = new UserWithVehiclesDto { UserId = userId, Name = "Alice", Email = "alice@example.com", Role = UserRole.Admin };
 
         var userService = Substitute.For<IUserService>();
         userService.GetUserAsync(userId).Returns(expected);
@@ -34,7 +34,7 @@ public class UsersControllerTests
         var result = await controller.GetUser(userId);
 
         var ok = Assert.IsType<OkObjectResult>(result.Result);
-        var dto = Assert.IsType<UserDto>(ok.Value);
+        var dto = Assert.IsType<UserWithVehiclesDto>(ok.Value);
         Assert.Equal(expected.UserId, dto.UserId);
         Assert.Equal(expected.Name, dto.Name);
         Assert.Equal(expected.Email, dto.Email);
@@ -154,7 +154,7 @@ public class UsersControllerTests
     {
         var userService = Substitute.For<IUserService>();
         userService.GetUserByNameAsync("Alice")
-            .Returns(new UserDto { UserId = Guid.NewGuid(), Name = "Alice", Email = "alice@example.com", Role = UserRole.Admin });
+            .Returns(new UserWithVehiclesDto { UserId = Guid.NewGuid(), Name = "Alice", Email = "alice@example.com", Role = UserRole.Admin });
 
         var controller = new UsersController(userService);
         var result = await controller.GetUserByName("Alice");
@@ -167,7 +167,7 @@ public class UsersControllerTests
     {
         var userService = Substitute.For<IUserService>();
         userService.GetUserByNameAsync("Inexistente")
-            .Returns(Task.FromException<UserDto>(new KeyNotFoundException()));
+            .Returns(Task.FromException<UserWithVehiclesDto>(new KeyNotFoundException()));
 
         var controller = new UsersController(userService);
         var result = await controller.GetUserByName("Inexistente");
