@@ -73,11 +73,10 @@ public class DashboardControllerTests(CustomWebApplicationFactory factory)
         await db.SaveChangesAsync();
     }
 
-
     [Fact]
     public async Task GetOccupancy_WhenNoAccesses_ReturnsZeroOccupancy()
     {
-        var response = await _client.GetAsync("/dashboard/occupancy");
+        var response = await _client.GetAsync("/api/dashboard/occupancy");
 
         response.EnsureSuccessStatusCode();
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -94,9 +93,9 @@ public class DashboardControllerTests(CustomWebApplicationFactory factory)
     public async Task GetOccupancy_WhenOneVehicleEntered_ReturnsOccupancyOne()
     {
         var (_, _, tag) = await SeedVehicleWithTagAsync("ENTR001");
-        await SeedAccessAsync(tag.TagId, AccessType.ENTRY, DateTime.UtcNow);
+        await SeedAccessAsync(tag.TagId, AccessType.Entry, DateTime.UtcNow);
 
-        var response = await _client.GetAsync("/dashboard/occupancy");
+        var response = await _client.GetAsync("/api/dashboard/occupancy");
 
         response.EnsureSuccessStatusCode();
         var body = await response.Content.ReadFromJsonAsync<OccupancyDto>(
@@ -113,10 +112,10 @@ public class DashboardControllerTests(CustomWebApplicationFactory factory)
     {
         var (_, _, tag) = await SeedVehicleWithTagAsync("EXIT001");
         var baseTime = DateTime.UtcNow;
-        await SeedAccessAsync(tag.TagId, AccessType.ENTRY, baseTime.AddMinutes(-10));
-        await SeedAccessAsync(tag.TagId, AccessType.EXIT, baseTime);
+        await SeedAccessAsync(tag.TagId, AccessType.Entry, baseTime.AddMinutes(-10));
+        await SeedAccessAsync(tag.TagId, AccessType.Exit, baseTime);
 
-        var response = await _client.GetAsync("/dashboard/occupancy");
+        var response = await _client.GetAsync("/api/dashboard/occupancy");
 
         response.EnsureSuccessStatusCode();
         var body = await response.Content.ReadFromJsonAsync<OccupancyDto>(
@@ -133,18 +132,18 @@ public class DashboardControllerTests(CustomWebApplicationFactory factory)
         var baseTime = DateTime.UtcNow;
         //Access flow(Entry)
         var (_, _, tagA) = await SeedVehicleWithTagAsync("CAR-A");
-        await SeedAccessAsync(tagA.TagId, AccessType.ENTRY, baseTime.AddMinutes(-30));
+        await SeedAccessAsync(tagA.TagId, AccessType.Entry, baseTime.AddMinutes(-30));
         //Access flow(Entry-Exit)
         var (_, _, tagB) = await SeedVehicleWithTagAsync("CAR-B");
-        await SeedAccessAsync(tagB.TagId, AccessType.ENTRY, baseTime.AddMinutes(-20));
-        await SeedAccessAsync(tagB.TagId, AccessType.EXIT, baseTime.AddMinutes(-5));
+        await SeedAccessAsync(tagB.TagId, AccessType.Entry, baseTime.AddMinutes(-20));
+        await SeedAccessAsync(tagB.TagId, AccessType.Exit, baseTime.AddMinutes(-5));
         //Access flow(Entry-Exit-Entry)
         var (_, _, tagC) = await SeedVehicleWithTagAsync("CAR-C");
-        await SeedAccessAsync(tagC.TagId, AccessType.ENTRY, baseTime.AddMinutes(-60));
-        await SeedAccessAsync(tagC.TagId, AccessType.EXIT, baseTime.AddMinutes(-40));
-        await SeedAccessAsync(tagC.TagId, AccessType.ENTRY, baseTime.AddMinutes(-2));
+        await SeedAccessAsync(tagC.TagId, AccessType.Entry, baseTime.AddMinutes(-60));
+        await SeedAccessAsync(tagC.TagId, AccessType.Exit, baseTime.AddMinutes(-40));
+        await SeedAccessAsync(tagC.TagId, AccessType.Entry, baseTime.AddMinutes(-2));
 
-        var response = await _client.GetAsync("/dashboard/occupancy");
+        var response = await _client.GetAsync("/api/dashboard/occupancy");
 
         response.EnsureSuccessStatusCode();
         var body = await response.Content.ReadFromJsonAsync<OccupancyDto>(
@@ -163,7 +162,42 @@ public class DashboardControllerTests(CustomWebApplicationFactory factory)
     [Fact]
     public async Task GetOccupancy_ReturnsOkStatusCode()
     {
-        var response = await _client.GetAsync("/dashboard/occupancy");
+        var response = await _client.GetAsync("/api/dashboard/occupancy");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetMetrics_ShouldReturnOk()
+    {
+        var response = await _client.GetAsync("/api/dashboard/metrics");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetMetrics_WhenNoAccesses_ShouldReturnZerosAndNullPeakTime()
+    {
+        var response = await _client.GetAsync("/api/dashboard/metrics");
+        response.EnsureSuccessStatusCode();
+
+        var metrics = await response.Content.ReadFromJsonAsync<DashboardMetricsDto>(CustomWebApplicationFactory.JsonOptions);
+
+        Assert.NotNull(metrics);
+        Assert.Equal(0, metrics.EntriesLastHour);
+        Assert.Equal(0, metrics.ExitsLastHour);
+        Assert.Null(metrics.PeakEntryTime);
+    }
+
+    [Fact]
+    public async Task GetMetrics_ShouldReturnCorrectFields()
+    {
+        var response = await _client.GetAsync("/api/dashboard/metrics");
+        response.EnsureSuccessStatusCode();
+
+        var metrics = await response.Content.ReadFromJsonAsync<DashboardMetricsDto>(CustomWebApplicationFactory.JsonOptions);
+
+        Assert.NotNull(metrics);
+        Assert.True(metrics.EntriesLastHour >= 0);
+        Assert.True(metrics.ExitsLastHour >= 0);
     }
 }
