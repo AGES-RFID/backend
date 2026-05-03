@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Backend.Features.Dashboard;
@@ -7,6 +8,20 @@ namespace Backend.Features.Dashboard;
 public class DashboardController(IDashboardService dashboardService) : ControllerBase
 {
     private readonly IDashboardService _dashboardService = dashboardService;
+
+    [HttpGet("occupancy")]
+    public async Task<ActionResult<OccupancyDto>> GetOccupancy()
+    {
+        try
+        {
+            var occupancy = await _dashboardService.GetOccupancyAsync();
+            return Ok(occupancy);
+        }
+        catch (Exception)
+        {
+            return Problem();
+        }
+    }
 
     [HttpGet("metrics")]
     public async Task<ActionResult<DashboardMetricsDto>> GetMetrics()
@@ -18,8 +33,7 @@ public class DashboardController(IDashboardService dashboardService) : Controlle
         }
         catch (Exception)
         {
-            Console.Error.WriteLine("Error calculating dashboard metrics");
-            return StatusCode(500, new { error = "Erro interno ao calcular métricas" });
+            return Problem();
         }
     }
 }
