@@ -31,7 +31,7 @@ public class AuthController(IAuthService authService, IUserService userService) 
 
     [HttpGet("me")]
     [Authorize]
-    public async Task<ActionResult<UserDto>> GetCurrentUser()
+    public async Task<ActionResult<UserWithVehiclesDto>> GetCurrentUser()
     {
         var sub = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
         if (!Guid.TryParse(sub, out var userId))
