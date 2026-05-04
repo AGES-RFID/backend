@@ -21,7 +21,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Registra o suporte para AWS Lambda. Se rodar local, este metodo eh ignorado.
 builder.Services.AddAWSLambdaHosting(LambdaEventSource.HttpApi);
 
-const string DevCorsPolicyName = "DevCors";
+const string CorsPolicyName = "DefaultCorsPolicy";
 
 // Add services to the container
 builder.Services.AddControllers()
@@ -59,19 +59,26 @@ if (string.IsNullOrWhiteSpace(connectionString))
     );
 }
 
-if (builder.Environment.IsDevelopment())
+// Configure CORS
+builder.Services.AddCors(options =>
 {
-    builder.Services.AddCors(options =>
+    options.AddPolicy(CorsPolicyName, policy =>
     {
-        options.AddPolicy(DevCorsPolicyName, policy =>
+        if (builder.Environment.IsDevelopment())
         {
-            policy
-                .WithOrigins("*") // in dev mode we allow everything
-                .AllowAnyHeader()
-                .AllowAnyMethod();
-        });
+            policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
+        }
+        else
+        {
+            var origins = builder.Configuration.GetSection("Cors:Origins").Get<string[]>();
+            if (origins == null || origins.Length == 0)
+                throw new InvalidOperationException(
+                    "In production, you must specify allowed CORS origins. Configure Cors:Origins or set the Cors__Origins environment variable"
+                );
+            policy.WithOrigins(origins).AllowAnyHeader().AllowAnyMethod();
+        }
     });
-}
+});
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString, o =>
@@ -136,16 +143,14 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
     app.UseSwagger();
     app.UseSwaggerUI();
-
-    app.UseCors(DevCorsPolicyName);
 }
 
+app.UseCors(CorsPolicyName);
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapGet("/api", () => Results.Ok(new { status = "ok", timestamp = DateTime.UtcNow }));
 app.MapControllers();
-
 
 app.Run();
