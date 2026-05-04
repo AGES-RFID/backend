@@ -17,16 +17,7 @@ public class AccessesService(AppDbContext db) : IAccessesService
     public async Task<AccessDto> RegisterEntryAsync(CreateAccessDto dto)
     {
 
-        var tag = await _db.Tags
-            .Include(t => t.Vehicle)
-            .FirstOrDefaultAsync(t => t.TagId == dto.TagId)
-            ?? throw new KeyNotFoundException("A tag informada não existe.");
-
-        if (tag.Status != TagStatus.IN_USE)
-            throw new InvalidOperationException("A tag informada não está ativa para acesso.");
-
-        if (tag.Vehicle == null)
-            throw new KeyNotFoundException("A tag informada não está vinculada a um veículo.");
+        var tag = await GetActiveTagAsync(dto.TagId);
 
 
         var lastAccess = await _db.Accesses
@@ -55,16 +46,7 @@ public class AccessesService(AppDbContext db) : IAccessesService
     public async Task<AccessDto> RegisterExitAsync(CreateAccessDto dto)
     {
 
-        var tag = await _db.Tags
-            .Include(t => t.Vehicle)
-            .FirstOrDefaultAsync(t => t.TagId == dto.TagId)
-            ?? throw new KeyNotFoundException("A tag informada não existe.");
-
-        if (tag.Status != TagStatus.IN_USE)
-            throw new InvalidOperationException("A tag informada não está ativa para acesso.");
-
-        if (tag.Vehicle == null)
-            throw new KeyNotFoundException("A tag informada não está vinculada a um veículo.");
+        var tag = await GetActiveTagAsync(dto.TagId);
 
 
         var lastAccess = await _db.Accesses
@@ -88,5 +70,21 @@ public class AccessesService(AppDbContext db) : IAccessesService
         await _db.SaveChangesAsync();
 
         return AccessDto.FromModel(access);
+    }
+
+    private async Task<Tag> GetActiveTagAsync(string tagId)
+    {
+        var tag = await _db.Tags
+            .Include(t => t.Vehicle)
+            .FirstOrDefaultAsync(t => t.TagId == tagId)
+            ?? throw new KeyNotFoundException("A tag informada não existe.");
+
+        if (tag.Status != TagStatus.IN_USE)
+            throw new InvalidOperationException("A tag informada não está ativa para acesso.");
+
+        if (tag.Vehicle == null)
+            throw new KeyNotFoundException("A tag informada não está vinculada a um veículo.");
+
+        return tag;
     }
 }
