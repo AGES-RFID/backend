@@ -4,6 +4,7 @@ using Backend.Features.Transactions;
 using Backend.Features.Users;
 using Backend.Features.Vehicles;
 using Backend.Features.Accesses;
+using Backend.Features.ParkingSettings;
 using Microsoft.EntityFrameworkCore;
 
 namespace Backend.Database;
@@ -15,6 +16,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Tag> Tags { get; set; }
     public DbSet<Access> Accesses { get; set; }
     public DbSet<Transaction> Transactions { get; set; }
+    public DbSet<ParkingSettings> ParkingSettings { get; set; }
+
     public override int SaveChanges()
     {
         ApplyTimestamps();
