@@ -11,7 +11,7 @@ public class VehicleControllerTests
     public async Task CreateVehicle_WhenSuccess_ReturnsCreatedAtAction()
     {
         var dto = new CreateVehicleDto { Plate = "AAA9A99", Brand = "Honda", Model = "HRV", UserId = Guid.NewGuid() };
-        var expected = new VehicleDto { VehicleId = Guid.NewGuid(), Plate = dto.Plate, Brand = dto.Brand, Model = dto.Model, UserId = dto.UserId };
+        var expected = new VehicleDto { VehicleId = Guid.NewGuid(), Plate = dto.Plate, Brand = dto.Brand, Model = dto.Model, UserId = dto.UserId!.Value };
 
         var vehicleService = Substitute.For<IVehicleService>();
         vehicleService.CreateVehicleAsync(dto).Returns(expected);
@@ -206,7 +206,7 @@ public class VehicleControllerTests
         var expected = new VehicleDto
         {
             VehicleId = vehicleId,
-            UserId = dto.UserId,
+            UserId = dto.UserId!.Value,
             Plate = dto.Plate,
             Brand = dto.Brand,
             Model = dto.Model

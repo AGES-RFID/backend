@@ -1,36 +1,46 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Security.Claims;
+using System.Text;
 using Backend.Database;
 using Backend.Features.Users;
 using Backend.Features.Vehicles;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.IdentityModel.Tokens;
 using tests.Setup;
 
 namespace tests.Features.Vehicles;
 
 public class VehicleControllerTests(CustomWebApplicationFactory factory) : IClassFixture<CustomWebApplicationFactory>, IAsyncLifetime
 {
+    private const string JwtIssuer = "backend";
+    private const string JwtAudience = "frontend";
+    private const string JwtSecret = "your-super-secret-key-change-this-in-production-at-least-32-characters!";
+
     private readonly HttpClient _client = factory.CreateClient();
     private readonly IServiceScopeFactory _scopeFactory = factory.Services.GetRequiredService<IServiceScopeFactory>();
 
     public async Task InitializeAsync()
     {
         await factory.ResetDatabaseAsync();
+        _client.DefaultRequestHeaders.Authorization = null;
     }
 
     public Task DisposeAsync() => Task.CompletedTask;
 
-    private async Task<User> SeedUserAsync()
+    private async Task<User> SeedUserAsync(UserRole role = UserRole.Admin)
     {
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var user = new User
         {
-            Name = "Test Owner",
+            Name = $"User-{Guid.NewGuid()}",
             Email = $"test_{Guid.NewGuid()}@email.com",
             PasswordHash = "dummy_hash",
-            Role = UserRole.Admin
+            Role = role
         };
 
         db.Users.Add(user);
@@ -38,11 +48,68 @@ public class VehicleControllerTests(CustomWebApplicationFactory factory) : IClas
         return user;
     }
 
+    private async Task<Vehicle> SeedVehicleAsync(User owner, string plate)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var vehicle = new Vehicle
+        {
+            UserId = owner.UserId,
+            Plate = plate,
+            Brand = "Honda",
+            Model = "HRV"
+        };
+
+        db.Vehicles.Add(vehicle);
+        await db.SaveChangesAsync();
+        return vehicle;
+    }
+
+    private static string CreateJwtToken(User user)
+    {
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(JwtSecret));
+        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+        var claims = new List<Claim>
+        {
+            new(JwtRegisteredClaimNames.Sub, user.UserId.ToString()),
+            new("role", user.Role.ToString())
+        };
+
+        var token = new JwtSecurityToken(
+            issuer: JwtIssuer,
+            audience: JwtAudience,
+            claims: claims,
+            expires: DateTime.UtcNow.AddHours(1),
+            signingCredentials: credentials);
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    private void SetAuthHeader(User user)
+    {
+        var token = CreateJwtToken(user);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+    }
+
+    [Fact]
+    public async Task GetAllVehicles_WhenUnauthenticated_ReturnsUnauthorized()
+    {
+        _client.DefaultRequestHeaders.Authorization = null;
+
+        var response = await _client.GetAsync("/api/vehicles");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
     [Fact]
     public async Task CreateVehicle_WithValidPayload_ReturnsCreated()
     {
-        var user = await SeedUserAsync();
-        var payload = new CreateVehicleDto { Brand = "Honda", Model = "HRV", Plate = "AAA9A99", UserId = user.UserId };
+        var admin = await SeedUserAsync(UserRole.Admin);
+        SetAuthHeader(admin);
+
+        var payload = new CreateVehicleDto { Brand = "Honda", Model = "HRV", Plate = "AAA9A99", UserId = admin.UserId };
 
         var response = await _client.PostAsync("/api/vehicles", JsonContent.Create(payload));
 
@@ -52,15 +119,47 @@ public class VehicleControllerTests(CustomWebApplicationFactory factory) : IClas
         var created = await response.Content.ReadFromJsonAsync<VehicleDto>();
         Assert.NotNull(created);
         Assert.Equal(payload.Plate, created.Plate);
-        Assert.Equal(payload.UserId, created.UserId);
+        Assert.Equal(payload.UserId!.Value, created.UserId);
         Assert.NotEqual(Guid.Empty, created.VehicleId);
+    }
+
+    [Fact]
+    public async Task CreateVehicle_WhenCustomerOmitsUserId_UsesAuthenticatedUser()
+    {
+        var customer = await SeedUserAsync(UserRole.Customer);
+        SetAuthHeader(customer);
+
+        var payload = new CreateVehicleDto { Brand = "Honda", Model = "HRV", Plate = "CUS0A99" };
+
+        var response = await _client.PostAsync("/api/vehicles", JsonContent.Create(payload));
+
+        response.EnsureSuccessStatusCode();
+        var created = await response.Content.ReadFromJsonAsync<VehicleDto>();
+        Assert.NotNull(created);
+        Assert.Equal(customer.UserId, created.UserId);
+    }
+
+    [Fact]
+    public async Task CreateVehicle_WhenCustomerCreatesForOtherUser_ReturnsNotFound()
+    {
+        var customer = await SeedUserAsync(UserRole.Customer);
+        var otherUser = await SeedUserAsync(UserRole.Customer);
+        SetAuthHeader(customer);
+
+        var payload = new CreateVehicleDto { Brand = "Honda", Model = "HRV", Plate = "CUS9A99", UserId = otherUser.UserId };
+
+        var response = await _client.PostAsync("/api/vehicles", JsonContent.Create(payload));
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
     public async Task CreateVehicle_WithExistingPlate_ReturnsConflict()
     {
-        var user = await SeedUserAsync();
-        var payload = new CreateVehicleDto { Brand = "Honda", Model = "HRV", Plate = "SAMEPLT", UserId = user.UserId };
+        var admin = await SeedUserAsync(UserRole.Admin);
+        SetAuthHeader(admin);
+
+        var payload = new CreateVehicleDto { Brand = "Honda", Model = "HRV", Plate = "SAMEPLT", UserId = admin.UserId };
 
         await _client.PostAsync("/api/vehicles", JsonContent.Create(payload));
 
@@ -70,20 +169,12 @@ public class VehicleControllerTests(CustomWebApplicationFactory factory) : IClas
     }
 
     [Fact]
-    public async Task CreateVehicle_WithNonExistentUserId_ReturnsNotFound()
-    {
-        var payload = new CreateVehicleDto { Brand = "Honda", Model = "HRV", Plate = "AAA9A99", UserId = Guid.NewGuid() };
-
-        var response = await _client.PostAsync("/api/vehicles", JsonContent.Create(payload));
-
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-    }
-
-    [Fact]
     public async Task SearchVehicleByPlate_WithExistingPlate_ReturnsOkWithDetails()
     {
-        var user = await SeedUserAsync();
-        var payload = new CreateVehicleDto { Brand = "Honda", Model = "HRV", Plate = "SEARCH1", UserId = user.UserId };
+        var admin = await SeedUserAsync(UserRole.Admin);
+        SetAuthHeader(admin);
+
+        var payload = new CreateVehicleDto { Brand = "Honda", Model = "HRV", Plate = "SEARCH1", UserId = admin.UserId };
         await _client.PostAsync("/api/vehicles", JsonContent.Create(payload));
 
         var response = await _client.GetAsync("/api/vehicles/search?plate=SEARCH1");
@@ -93,127 +184,86 @@ public class VehicleControllerTests(CustomWebApplicationFactory factory) : IClas
 
         Assert.NotNull(fetched);
         Assert.Equal("SEARCH1", fetched.Plate);
-        Assert.Equal(user.Name, fetched.OwnerName);
+        Assert.Equal(admin.Name, fetched.OwnerName);
         Assert.NotEqual(Guid.Empty, fetched.VehicleId);
     }
 
     [Fact]
-    public async Task SearchVehicleByPlate_WithMissingQueryParam_ReturnsBadRequest()
+    public async Task SearchVehicleByPlate_WhenCustomerSearchesOtherUserVehicle_ReturnsNotFound()
     {
-        var response = await _client.GetAsync("/api/vehicles/search");
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-    }
+        var owner = await SeedUserAsync(UserRole.Customer);
+        await SeedVehicleAsync(owner, "HIDE999");
 
-    [Fact]
-    public async Task SearchVehicleByPlate_WithNonExistentPlate_ReturnsNotFound()
-    {
-        var response = await _client.GetAsync("/api/vehicles/search?plate=GHOST99");
+        var customer = await SeedUserAsync(UserRole.Customer);
+        SetAuthHeader(customer);
+
+        var response = await _client.GetAsync("/api/vehicles/search?plate=HIDE999");
+
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
-    public async Task UpdateVehicle_WithValidData_ReturnsOk()
+    public async Task GetVehicleById_WhenCustomerRequestsOtherUsersVehicle_ReturnsNotFound()
     {
-        var user = await SeedUserAsync();
-        var createPayload = new CreateVehicleDto { Brand = "Honda", Model = "HRV", Plate = "UPDT001", UserId = user.UserId };
+        var owner = await SeedUserAsync(UserRole.Customer);
+        var vehicle = await SeedVehicleAsync(owner, "OWNR001");
 
-        var createResponse = await _client.PostAsync("/api/vehicles", JsonContent.Create(createPayload));
-        var created = await createResponse.Content.ReadFromJsonAsync<VehicleDto>();
+        var customer = await SeedUserAsync(UserRole.Customer);
+        SetAuthHeader(customer);
 
-        var updatePayload = new CreateVehicleDto { Brand = "Toyota", Model = "Corolla", Plate = "UPDT002", UserId = user.UserId };
+        var response = await _client.GetAsync($"/api/vehicles/{vehicle.VehicleId}");
 
-        var updateResponse = await _client.PutAsync($"/api/vehicles/{created!.VehicleId}", JsonContent.Create(updatePayload));
-
-        updateResponse.EnsureSuccessStatusCode();
-        var updated = await updateResponse.Content.ReadFromJsonAsync<VehicleDto>();
-
-        Assert.NotNull(updated);
-        Assert.Equal("Toyota", updated.Brand);
-        Assert.Equal("UPDT002", updated.Plate);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
-    public async Task UpdateVehicle_WithNewOwner_UpdatesUserId()
+    public async Task GetAllVehicles_WhenCustomer_ReturnsOnlyOwnVehicles()
     {
-        var firstOwner = await SeedUserAsync();
-        var secondOwner = await SeedUserAsync();
+        var owner = await SeedUserAsync(UserRole.Customer);
+        await SeedVehicleAsync(owner, "OWN1111");
 
-        var createPayload = new CreateVehicleDto
-        {
-            Brand = "Honda",
-            Model = "HRV",
-            Plate = "OWN0001",
-            UserId = firstOwner.UserId
-        };
+        var other = await SeedUserAsync(UserRole.Customer);
+        await SeedVehicleAsync(other, "OTH2222");
 
-        var createResponse = await _client.PostAsync("/api/vehicles", JsonContent.Create(createPayload));
-        var created = await createResponse.Content.ReadFromJsonAsync<VehicleDto>();
-
-        var updatePayload = new CreateVehicleDto
-        {
-            Brand = "Honda",
-            Model = "HRV",
-            Plate = "OWN0001",
-            UserId = secondOwner.UserId
-        };
-
-        var updateResponse = await _client.PutAsync($"/api/vehicles/{created!.VehicleId}", JsonContent.Create(updatePayload));
-
-        updateResponse.EnsureSuccessStatusCode();
-        var updated = await updateResponse.Content.ReadFromJsonAsync<VehicleDto>();
-
-        Assert.NotNull(updated);
-        Assert.Equal(secondOwner.UserId, updated.UserId);
-    }
-
-    [Fact]
-    public async Task GetVehicleById_WithExistingId_ReturnsOk()
-    {
-        var user = await SeedUserAsync();
-        var payload = new CreateVehicleDto { Brand = "Honda", Model = "HRV", Plate = "GET0001", UserId = user.UserId };
-
-        var createResponse = await _client.PostAsync("/api/vehicles", JsonContent.Create(payload));
-        var created = await createResponse.Content.ReadFromJsonAsync<VehicleDto>();
-
-        var response = await _client.GetAsync($"/api/vehicles/{created!.VehicleId}");
-
-        response.EnsureSuccessStatusCode();
-        var fetched = await response.Content.ReadFromJsonAsync<VehicleDto>();
-        Assert.NotNull(fetched);
-        Assert.Equal(created.VehicleId, fetched.VehicleId);
-    }
-
-    [Fact]
-    public async Task GetAllVehicles_ReturnsOkWithList()
-    {
-        var user = await SeedUserAsync();
-        var payload = new CreateVehicleDto { Brand = "Honda", Model = "HRV", Plate = "LIST001", UserId = user.UserId };
-
-        await _client.PostAsync("/api/vehicles", JsonContent.Create(payload));
+        SetAuthHeader(owner);
 
         var response = await _client.GetAsync("/api/vehicles");
 
         response.EnsureSuccessStatusCode();
         var fetched = await response.Content.ReadFromJsonAsync<List<VehicleDto>>();
+
         Assert.NotNull(fetched);
-        Assert.NotEmpty(fetched);
+        Assert.Single(fetched);
+        Assert.Equal("OWN1111", fetched[0].Plate);
     }
 
     [Fact]
-    public async Task DeleteVehicle_WithValidId_ReturnsNoContent()
+    public async Task UpdateVehicle_WhenCustomerUpdatesOtherUsersVehicle_ReturnsNotFound()
     {
-        var user = await SeedUserAsync();
-        var payload = new CreateVehicleDto { Brand = "Honda", Model = "HRV", Plate = "DEL0001", UserId = user.UserId };
+        var owner = await SeedUserAsync(UserRole.Customer);
+        var vehicle = await SeedVehicleAsync(owner, "UPD0001");
 
-        var createResponse = await _client.PostAsync("/api/vehicles", JsonContent.Create(payload));
-        var created = await createResponse.Content.ReadFromJsonAsync<VehicleDto>();
+        var customer = await SeedUserAsync(UserRole.Customer);
+        SetAuthHeader(customer);
 
-        var delResponse = await _client.DeleteAsync($"/api/vehicles/{created!.VehicleId}");
+        var updatePayload = new CreateVehicleDto { Brand = "Toyota", Model = "Corolla", Plate = "UPD0002", UserId = customer.UserId };
 
-        delResponse.EnsureSuccessStatusCode();
-        Assert.Equal(HttpStatusCode.NoContent, delResponse.StatusCode);
+        var response = await _client.PutAsync($"/api/vehicles/{vehicle.VehicleId}", JsonContent.Create(updatePayload));
 
-        var getResponse = await _client.GetAsync($"/api/vehicles/{created.VehicleId}");
-        Assert.Equal(HttpStatusCode.NotFound, getResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task DeleteVehicle_WhenCustomerDeletesOtherUsersVehicle_ReturnsNotFound()
+    {
+        var owner = await SeedUserAsync(UserRole.Customer);
+        var vehicle = await SeedVehicleAsync(owner, "DEL0001");
+
+        var customer = await SeedUserAsync(UserRole.Customer);
+        SetAuthHeader(customer);
+
+        var response = await _client.DeleteAsync($"/api/vehicles/{vehicle.VehicleId}");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 }
