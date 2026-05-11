@@ -254,6 +254,110 @@ public class VehicleControllerTests(CustomWebApplicationFactory factory) : IClas
     }
 
     [Fact]
+    public async Task CreateVehicle_WhenAdminOmitsUserId_DefaultsToAuthenticatedAdmin()
+    {
+        var admin = await SeedUserAsync(UserRole.Admin);
+        SetAuthHeader(admin);
+
+        var payload = new CreateVehicleDto { Brand = "Honda", Model = "HRV", Plate = "ADM0A99" };
+
+        var response = await _client.PostAsync("/api/vehicles", JsonContent.Create(payload));
+
+        response.EnsureSuccessStatusCode();
+        var created = await response.Content.ReadFromJsonAsync<VehicleDto>();
+        Assert.NotNull(created);
+        Assert.Equal(admin.UserId, created.UserId);
+    }
+
+    [Fact]
+    public async Task CreateVehicle_WhenCustomerProvidesOwnUserId_ReturnsCreated()
+    {
+        var customer = await SeedUserAsync(UserRole.Customer);
+        SetAuthHeader(customer);
+
+        var payload = new CreateVehicleDto { Brand = "Honda", Model = "HRV", Plate = "CUS1A99", UserId = customer.UserId };
+
+        var response = await _client.PostAsync("/api/vehicles", JsonContent.Create(payload));
+
+        response.EnsureSuccessStatusCode();
+        var created = await response.Content.ReadFromJsonAsync<VehicleDto>();
+        Assert.NotNull(created);
+        Assert.Equal(customer.UserId, created.UserId);
+    }
+
+    [Fact]
+    public async Task UpdateVehicle_WhenAdminOmitsUserId_KeepsCurrentOwner()
+    {
+        var owner = await SeedUserAsync(UserRole.Customer);
+        var vehicle = await SeedVehicleAsync(owner, "ADMUPD1");
+
+        var admin = await SeedUserAsync(UserRole.Admin);
+        SetAuthHeader(admin);
+
+        var payload = new CreateVehicleDto { Brand = "Toyota", Model = "Corolla", Plate = "ADMUPD2" };
+
+        var response = await _client.PutAsync($"/api/vehicles/{vehicle.VehicleId}", JsonContent.Create(payload));
+
+        response.EnsureSuccessStatusCode();
+        var updated = await response.Content.ReadFromJsonAsync<VehicleDto>();
+        Assert.NotNull(updated);
+        Assert.Equal(owner.UserId, updated.UserId);
+        Assert.Equal("ADMUPD2", updated.Plate);
+    }
+
+    [Fact]
+    public async Task UpdateVehicle_WhenAdminSetsNewOwner_TransfersOwnership()
+    {
+        var owner = await SeedUserAsync(UserRole.Customer);
+        var vehicle = await SeedVehicleAsync(owner, "TRN0001");
+        var newOwner = await SeedUserAsync(UserRole.Customer);
+
+        var admin = await SeedUserAsync(UserRole.Admin);
+        SetAuthHeader(admin);
+
+        var payload = new CreateVehicleDto { Brand = "Honda", Model = "HRV", Plate = "TRN0002", UserId = newOwner.UserId };
+
+        var response = await _client.PutAsync($"/api/vehicles/{vehicle.VehicleId}", JsonContent.Create(payload));
+
+        response.EnsureSuccessStatusCode();
+        var updated = await response.Content.ReadFromJsonAsync<VehicleDto>();
+        Assert.NotNull(updated);
+        Assert.Equal(newOwner.UserId, updated.UserId);
+    }
+
+    [Fact]
+    public async Task UpdateVehicle_WhenCustomerUpdatesOwnVehicleWithoutUserId_UsesAuthenticatedOwner()
+    {
+        var customer = await SeedUserAsync(UserRole.Customer);
+        var vehicle = await SeedVehicleAsync(customer, "CUP0001");
+        SetAuthHeader(customer);
+
+        var payload = new CreateVehicleDto { Brand = "Toyota", Model = "Yaris", Plate = "CUP0002" };
+
+        var response = await _client.PutAsync($"/api/vehicles/{vehicle.VehicleId}", JsonContent.Create(payload));
+
+        response.EnsureSuccessStatusCode();
+        var updated = await response.Content.ReadFromJsonAsync<VehicleDto>();
+        Assert.NotNull(updated);
+        Assert.Equal(customer.UserId, updated.UserId);
+    }
+
+    [Fact]
+    public async Task UpdateVehicle_WhenCustomerTriesToTransferOwnVehicle_ReturnsNotFound()
+    {
+        var customer = await SeedUserAsync(UserRole.Customer);
+        var vehicle = await SeedVehicleAsync(customer, "CNS0001");
+        var otherUser = await SeedUserAsync(UserRole.Customer);
+        SetAuthHeader(customer);
+
+        var payload = new CreateVehicleDto { Brand = "Honda", Model = "Fit", Plate = "CNS0002", UserId = otherUser.UserId };
+
+        var response = await _client.PutAsync($"/api/vehicles/{vehicle.VehicleId}", JsonContent.Create(payload));
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
     public async Task DeleteVehicle_WhenCustomerDeletesOtherUsersVehicle_ReturnsNotFound()
     {
         var owner = await SeedUserAsync(UserRole.Customer);
