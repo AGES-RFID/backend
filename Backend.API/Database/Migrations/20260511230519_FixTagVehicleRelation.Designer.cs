@@ -6,17 +6,20 @@ using Backend.Features.Transactions;
 using Backend.Features.Users;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Backend.Migrations
+namespace Backend.Database.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260511230519_FixTagVehicleRelation")]
+    partial class FixTagVehicleRelation
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -41,10 +44,14 @@ namespace Backend.Migrations
                         .HasColumnName("created_at")
                         .HasDefaultValueSql("now()");
 
-                    b.Property<string>("TagId")
+                    b.Property<Guid>("TagId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tag_id");
+
+                    b.Property<string>("Tid")
                         .IsRequired()
                         .HasColumnType("text")
-                        .HasColumnName("tag_id");
+                        .HasColumnName("tid");
 
                     b.Property<DateTime>("Timestamp")
                         .ValueGeneratedOnAdd()
@@ -116,8 +123,9 @@ namespace Backend.Migrations
 
             modelBuilder.Entity("Backend.Features.Tags.Tag", b =>
                 {
-                    b.Property<string>("TagId")
-                        .HasColumnType("text")
+                    b.Property<Guid>("TagId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
                         .HasColumnName("tag_id");
 
                     b.Property<DateTime>("CreatedAt")
@@ -137,6 +145,11 @@ namespace Backend.Migrations
                         .HasDefaultValue(0)
                         .HasColumnName("status");
 
+                    b.Property<string>("Tid")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("tid");
+
                     b.Property<DateTime>("UpdatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
@@ -145,6 +158,9 @@ namespace Backend.Migrations
 
                     b.HasKey("TagId")
                         .HasName("pk_tags");
+
+                    b.HasAlternateKey("Tid")
+                        .HasName("ak_tags_tid");
 
                     b.ToTable("Tags", (string)null);
                 });
@@ -331,6 +347,7 @@ namespace Backend.Migrations
                     b.HasOne("Backend.Features.Tags.Tag", "Tag")
                         .WithOne("Vehicle")
                         .HasForeignKey("Backend.Features.Vehicles.Vehicle", "TagId")
+                        .HasPrincipalKey("Backend.Features.Tags.Tag", "Tid")
                         .HasConstraintName("fk_vehicles_tags_tag_id");
 
                     b.HasOne("Backend.Features.Users.User", "User")

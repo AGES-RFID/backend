@@ -1,9 +1,13 @@
+using Backend.Features.Accesses;
+
 namespace Backend.Features.Transactions;
 
 public class Transaction
 {
     public Guid TransactionId { get; set; }
     public Guid UserId { get; set; }
+    public Guid? AccessId { get; set; }
+    public Access? Access { get; set; }
     public decimal Amount { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }

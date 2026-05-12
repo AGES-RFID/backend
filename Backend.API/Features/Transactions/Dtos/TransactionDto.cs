@@ -4,6 +4,7 @@ public class TransactionDto
 {
     public required Guid TransactionId { get; set; }
     public required Guid UserId { get; set; }
+    public required Guid? AccessId { get; set; }
     public required decimal Amount { get; set; }
     public required string Description { get; set; }
     public required TransactionType TransactionType { get; set; }
@@ -13,6 +14,7 @@ public class TransactionDto
     {
         TransactionId = transaction.TransactionId,
         UserId = transaction.UserId,
+        AccessId = transaction.AccessId ?? Guid.Empty,
         Amount = transaction.Amount,
         Description = transaction.Description,
         TransactionType = transaction.TransactionType,

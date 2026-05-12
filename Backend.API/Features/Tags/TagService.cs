@@ -30,9 +30,16 @@ public class TagService(AppDbContext db) : ITagService
             throw new TagConflictException($"A tag with id '{dto.TagId}' already exists");
         }
 
+        var existingEpc = await _db.Tags.FirstOrDefaultAsync(t => t.Epc == dto.Epc);
+        if (existingEpc != null)
+        {
+            throw new TagConflictException($"A tag with Epc '{dto.Epc}' already exists");
+        }
+
         var tag = new Tag
         {
             TagId = dto.TagId,
+            Epc = dto.Epc,
             Status = TagStatus.AVAILABLE
         };
 

@@ -5,6 +5,7 @@ namespace Backend.Features.Transactions;
 public class CreateTransactionRequestDto
 {
     public Guid? UserId { get; set; }
+    public Guid? AccessId { get; set; }
 
     [MinLength(1)]
     public required string Description { get; set; }

@@ -18,7 +18,8 @@ public class DashboardServiceTests
 
     private static Tag CreateTag(string tagId = "TAG001") => new()
     {
-        TagId = tagId
+        TagId = tagId,
+        Epc = $"EPC-{tagId}"
     };
 
     private static Access CreateAccess(string tagId, AccessType type, DateTime timestamp) => new()
@@ -26,7 +27,7 @@ public class DashboardServiceTests
         TagId = tagId,
         Type = type,
         Timestamp = timestamp,
-        Tag = new Tag { TagId = tagId }
+        Tag = new Tag { TagId = tagId, Epc = $"EPC-{tagId}" }
     };
 
     [Fact]

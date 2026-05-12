@@ -6,4 +6,7 @@ public class CreateTagDto
 {
     [Required(ErrorMessage = "TagId is required")]
     public required string TagId { get; set; }
+
+    [Required(ErrorMessage = "Epc is required")]
+    public required string Epc { get; set; }
 }

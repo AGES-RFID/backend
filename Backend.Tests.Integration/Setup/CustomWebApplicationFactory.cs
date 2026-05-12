@@ -19,6 +19,11 @@ namespace tests.Setup;
 
 public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
+    public CustomWebApplicationFactory()
+    {
+        Environment.SetEnvironmentVariable("SKIP_MIGRATIONS", "true");
+    }
+
     // Define the PostgreSQL container
     private readonly PostgreSqlContainer _dbContainer = new PostgreSqlBuilder("postgres:18-alpine")
         .WithDatabase("rfid_test_db")
@@ -64,7 +69,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
             using var scope = sp.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-            db.Database.Migrate();
+            db.Database.EnsureCreated();
         });
     }
 

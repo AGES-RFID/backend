@@ -36,7 +36,7 @@ public class DashboardControllerTests(CustomWebApplicationFactory factory)
         };
         db.Users.Add(user);
 
-        var tag = new Tag { TagId = $"TAG-{Guid.NewGuid()}", Status = TagStatus.IN_USE };
+        var tag = new Tag { TagId = $"TAG-{Guid.NewGuid()}", Status = TagStatus.IN_USE, Epc = "EPC-TEST" };
         db.Tags.Add(tag);
 
         await db.SaveChangesAsync();

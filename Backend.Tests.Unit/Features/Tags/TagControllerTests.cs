@@ -9,7 +9,7 @@ public class TagControllerTests
     [Fact]
     public async Task CreateTag_WhenServiceReturnsTag_ReturnsCreatedWithTag()
     {
-        var dto = new CreateTagDto { TagId = "TAG-001" };
+        var dto = new CreateTagDto { TagId = "TAG-001", Epc = "EPC-001" };
         var expected = new TagDto { TagId = dto.TagId, Status = "AVAILABLE" };
 
         var tagService = Substitute.For<ITagService>();
@@ -36,7 +36,7 @@ public class TagControllerTests
         var controller = new TagController(tagService);
         controller.ModelState.AddModelError("TagId", "required");
 
-        var result = await controller.CreateTag(new CreateTagDto { TagId = "TAG-001" });
+        var result = await controller.CreateTag(new CreateTagDto { TagId = "TAG-001", Epc = "EPC-001" });
 
         Assert.IsType<BadRequestObjectResult>(result.Result);
         await tagService.DidNotReceiveWithAnyArgs().CreateTagAsync(default!);
@@ -51,7 +51,7 @@ public class TagControllerTests
 
         var controller = new TagController(tagService);
 
-        var result = await controller.CreateTag(new CreateTagDto { TagId = "TAG-001" });
+        var result = await controller.CreateTag(new CreateTagDto { TagId = "TAG-001", Epc = "EPC-001" });
 
         var conflict = Assert.IsType<ConflictObjectResult>(result.Result);
         Assert.Equal(409, conflict.StatusCode);
@@ -66,7 +66,7 @@ public class TagControllerTests
 
         var controller = new TagController(tagService);
 
-        var result = await controller.CreateTag(new CreateTagDto { TagId = "TAG-001" });
+        var result = await controller.CreateTag(new CreateTagDto { TagId = "TAG-001", Epc = "EPC-001" });
 
         var error = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(500, error.StatusCode);

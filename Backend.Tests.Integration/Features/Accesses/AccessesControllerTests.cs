@@ -32,7 +32,7 @@ public class AccessesControllerTests(CustomWebApplicationFactory factory) : ICla
         var user = new User { Name = "Test", Email = $"test_{Guid.NewGuid()}@example.com", PasswordHash = "hash", Role = UserRole.Customer };
         db.Users.Add(user);
 
-        var tag = new Tag { TagId = tagId, Status = status };
+        var tag = new Tag { TagId = tagId, Status = status, Epc = $"EPC-{tagId}" };
         db.Tags.Add(tag);
 
         db.Vehicles.Add(new Vehicle { UserId = user.UserId, TagId = tagId, Plate = $"TST{Guid.NewGuid().ToString()[..4]}", Brand = "VW", Model = "Gol" });
