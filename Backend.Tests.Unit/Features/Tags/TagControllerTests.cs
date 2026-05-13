@@ -9,8 +9,8 @@ public class TagControllerTests
     [Fact]
     public async Task CreateTag_WhenServiceReturnsTag_ReturnsCreatedWithTag()
     {
-        var dto = new CreateTagDto { TagId = "TAG-001", Epc = "EPC-001" };
-        var expected = new TagDto { TagId = dto.TagId, Status = "AVAILABLE" };
+        var dto = new CreateTagDto { Epc = "EPC-001", Tid = "TID-001" };
+        var expected = new TagDto { TagId = Guid.NewGuid(), Status = "AVAILABLE", Epc = "EPC-001", Tid = "TID-001" };
 
         var tagService = Substitute.For<ITagService>();
         tagService.CreateTagAsync(dto).Returns(expected);
@@ -26,7 +26,7 @@ public class TagControllerTests
         Assert.Equal(expected.TagId, dtoResult.TagId);
         Assert.Equal(expected.Status, dtoResult.Status);
 
-        await tagService.Received(1).CreateTagAsync(Arg.Is<CreateTagDto>(x => x.TagId == dto.TagId));
+        await tagService.Received(1).CreateTagAsync(Arg.Is<CreateTagDto>(x => x.Epc == dto.Epc));
     }
 
     [Fact]
@@ -34,9 +34,9 @@ public class TagControllerTests
     {
         var tagService = Substitute.For<ITagService>();
         var controller = new TagController(tagService);
-        controller.ModelState.AddModelError("TagId", "required");
+        controller.ModelState.AddModelError("Epc", "required");
 
-        var result = await controller.CreateTag(new CreateTagDto { TagId = "TAG-001", Epc = "EPC-001" });
+        var result = await controller.CreateTag(new CreateTagDto { Epc = "EPC-001", Tid = "TID-001" });
 
         Assert.IsType<BadRequestObjectResult>(result.Result);
         await tagService.DidNotReceiveWithAnyArgs().CreateTagAsync(default!);
@@ -51,7 +51,7 @@ public class TagControllerTests
 
         var controller = new TagController(tagService);
 
-        var result = await controller.CreateTag(new CreateTagDto { TagId = "TAG-001", Epc = "EPC-001" });
+        var result = await controller.CreateTag(new CreateTagDto { Epc = "EPC-001", Tid = "TID-001" });
 
         var conflict = Assert.IsType<ConflictObjectResult>(result.Result);
         Assert.Equal(409, conflict.StatusCode);
@@ -66,7 +66,7 @@ public class TagControllerTests
 
         var controller = new TagController(tagService);
 
-        var result = await controller.CreateTag(new CreateTagDto { TagId = "TAG-001", Epc = "EPC-001" });
+        var result = await controller.CreateTag(new CreateTagDto { Epc = "EPC-001", Tid = "TID-001" });
 
         var error = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(500, error.StatusCode);
@@ -75,11 +75,14 @@ public class TagControllerTests
     [Fact]
     public async Task GetAllTags_WhenServiceReturnsTags_ReturnsOk()
     {
+        var tagId = Guid.NewGuid();
         var expected = new List<TagListDto>
         {
             new()
             {
-                Id = "TAG-001",
+                TagId = tagId,
+                Tid = "TID-001",
+                Epc = "EPC-001",
                 UserName = "Alice",
                 Plate = "ABC1D23",
                 Status = "AVAILABLE"
@@ -97,7 +100,7 @@ public class TagControllerTests
         var dto = Assert.IsAssignableFrom<IEnumerable<TagListDto>>(ok.Value);
         var tag = Assert.Single(dto);
 
-        Assert.Equal("TAG-001", tag.Id);
+        Assert.Equal(tagId, tag.TagId);
         Assert.Equal("Alice", tag.UserName);
         Assert.Equal("ABC1D23", tag.Plate);
         Assert.Equal("AVAILABLE", tag.Status);
@@ -138,11 +141,14 @@ public class TagControllerTests
     [Fact]
     public async Task GetAllTags_WhenStatusIsProvided_PassesStatusToService()
     {
+        var tagId = Guid.NewGuid();
         var expected = new List<TagListDto>
         {
             new()
             {
-                Id = "TAG-001",
+                TagId = tagId,
+                Tid = "TID-001",
+                Epc = "EPC-001",
                 UserName = "Alice",
                 Plate = "ABC1D23",
                 Status = "AVAILABLE"
@@ -167,8 +173,8 @@ public class TagControllerTests
     [Fact]
     public async Task DeactivateTag_WhenServiceReturnsTag_ReturnsOk()
     {
-        var tagId = "TAG-001";
-        var expected = new TagDto { TagId = tagId, Status = "INACTIVE" };
+        var tagId = Guid.NewGuid();
+        var expected = new TagDto { TagId = tagId, Status = "INACTIVE", Epc = "EPC-001", Tid = "TID-001" };
 
         var tagService = Substitute.For<ITagService>();
         tagService.DeactivateTagAsync(tagId).Returns(expected);
@@ -189,28 +195,30 @@ public class TagControllerTests
     [Fact]
     public async Task DeactivateTag_WhenServiceThrowsNotFound_ReturnsNotFound()
     {
+        var tagId = Guid.NewGuid();
         var tagService = Substitute.For<ITagService>();
-        tagService.DeactivateTagAsync("TAG-404")
+        tagService.DeactivateTagAsync(tagId)
             .Returns(Task.FromException<TagDto>(new KeyNotFoundException("not found")));
 
         var controller = new TagController(tagService);
 
-        var result = await controller.DeactivateTag("TAG-404");
+        var result = await controller.DeactivateTag(tagId);
 
         Assert.IsType<NotFoundObjectResult>(result.Result);
-        await tagService.Received(1).DeactivateTagAsync("TAG-404");
+        await tagService.Received(1).DeactivateTagAsync(tagId);
     }
 
     [Fact]
     public async Task DeactivateTag_WhenServiceThrowsConflict_ReturnsConflict()
     {
+        var tagId = Guid.NewGuid();
         var tagService = Substitute.For<ITagService>();
-        tagService.DeactivateTagAsync("TAG-001")
+        tagService.DeactivateTagAsync(tagId)
             .Returns(Task.FromException<TagDto>(new TagConflictException("inactive")));
 
         var controller = new TagController(tagService);
 
-        var result = await controller.DeactivateTag("TAG-001");
+        var result = await controller.DeactivateTag(tagId);
 
         var conflict = Assert.IsType<ConflictObjectResult>(result.Result);
         Assert.Equal(409, conflict.StatusCode);
@@ -219,13 +227,14 @@ public class TagControllerTests
     [Fact]
     public async Task DeactivateTag_WhenServiceThrowsUnexpectedException_ReturnsInternalServerError()
     {
+        var tagId = Guid.NewGuid();
         var tagService = Substitute.For<ITagService>();
-        tagService.DeactivateTagAsync("TAG-001")
+        tagService.DeactivateTagAsync(tagId)
             .Returns(Task.FromException<TagDto>(new Exception("boom")));
 
         var controller = new TagController(tagService);
 
-        var result = await controller.DeactivateTag("TAG-001");
+        var result = await controller.DeactivateTag(tagId);
 
         var error = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(500, error.StatusCode);
@@ -238,18 +247,18 @@ public class TagControllerTests
         var controller = new TagController(tagService);
         controller.ModelState.AddModelError("VehicleId", "required");
 
-        var result = await controller.AssignVehicle("TAG-001", new AssignVehicleDto { VehicleId = Guid.NewGuid() });
+        var result = await controller.AssignVehicle(Guid.NewGuid(), new AssignVehicleDto { VehicleId = Guid.NewGuid() });
 
         Assert.IsType<BadRequestObjectResult>(result.Result);
-        await tagService.DidNotReceiveWithAnyArgs().AssignVehicleAsync(default!, default!);
+        await tagService.DidNotReceiveWithAnyArgs().AssignVehicleAsync(default, default!);
     }
 
     [Fact]
     public async Task AssignVehicle_WhenServiceReturnsTag_ReturnsOk()
     {
-        var tagId = "TAG-001";
+        var tagId = Guid.NewGuid();
         var dto = new AssignVehicleDto { VehicleId = Guid.NewGuid() };
-        var expected = new TagDto { TagId = tagId, Status = "IN_USE", VehicleId = dto.VehicleId };
+        var expected = new TagDto { TagId = tagId, Status = "IN_USE", VehicleId = dto.VehicleId, Epc = "EPC-001", Tid = "TID-001" };
 
         var tagService = Substitute.For<ITagService>();
         tagService.AssignVehicleAsync(tagId, dto).Returns(expected);
@@ -271,28 +280,30 @@ public class TagControllerTests
     [Fact]
     public async Task AssignVehicle_WhenServiceThrowsNotFound_ReturnsNotFound()
     {
+        var tagId = Guid.NewGuid();
         var tagService = Substitute.For<ITagService>();
-        tagService.AssignVehicleAsync("TAG-404", Arg.Any<AssignVehicleDto>())
+        tagService.AssignVehicleAsync(tagId, Arg.Any<AssignVehicleDto>())
             .Returns(Task.FromException<TagDto>(new KeyNotFoundException("not found")));
 
         var controller = new TagController(tagService);
 
-        var result = await controller.AssignVehicle("TAG-404", new AssignVehicleDto { VehicleId = Guid.NewGuid() });
+        var result = await controller.AssignVehicle(tagId, new AssignVehicleDto { VehicleId = Guid.NewGuid() });
 
         Assert.IsType<NotFoundObjectResult>(result.Result);
-        await tagService.Received(1).AssignVehicleAsync("TAG-404", Arg.Any<AssignVehicleDto>());
+        await tagService.Received(1).AssignVehicleAsync(tagId, Arg.Any<AssignVehicleDto>());
     }
 
     [Fact]
     public async Task AssignVehicle_WhenServiceThrowsConflict_ReturnsConflict()
     {
+        var tagId = Guid.NewGuid();
         var tagService = Substitute.For<ITagService>();
-        tagService.AssignVehicleAsync("TAG-001", Arg.Any<AssignVehicleDto>())
+        tagService.AssignVehicleAsync(tagId, Arg.Any<AssignVehicleDto>())
             .Returns(Task.FromException<TagDto>(new TagConflictException("conflict")));
 
         var controller = new TagController(tagService);
 
-        var result = await controller.AssignVehicle("TAG-001", new AssignVehicleDto { VehicleId = Guid.NewGuid() });
+        var result = await controller.AssignVehicle(tagId, new AssignVehicleDto { VehicleId = Guid.NewGuid() });
 
         var conflict = Assert.IsType<ConflictObjectResult>(result.Result);
         Assert.Equal(409, conflict.StatusCode);
@@ -301,13 +312,14 @@ public class TagControllerTests
     [Fact]
     public async Task AssignVehicle_WhenServiceThrowsUnexpectedException_ReturnsInternalServerError()
     {
+        var tagId = Guid.NewGuid();
         var tagService = Substitute.For<ITagService>();
-        tagService.AssignVehicleAsync("TAG-001", Arg.Any<AssignVehicleDto>())
+        tagService.AssignVehicleAsync(tagId, Arg.Any<AssignVehicleDto>())
             .Returns(Task.FromException<TagDto>(new Exception("boom")));
 
         var controller = new TagController(tagService);
 
-        var result = await controller.AssignVehicle("TAG-001", new AssignVehicleDto { VehicleId = Guid.NewGuid() });
+        var result = await controller.AssignVehicle(tagId, new AssignVehicleDto { VehicleId = Guid.NewGuid() });
 
         var error = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(500, error.StatusCode);

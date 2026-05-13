@@ -24,7 +24,7 @@ public class AccessesControllerTests(CustomWebApplicationFactory factory) : ICla
 
     public Task DisposeAsync() => Task.CompletedTask;
 
-    private async Task SeedVehicleAndTagAsync(string tagId, TagStatus status = TagStatus.IN_USE)
+    private async Task<Guid> SeedVehicleAndTagAsync(TagStatus status = TagStatus.IN_USE)
     {
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -32,15 +32,16 @@ public class AccessesControllerTests(CustomWebApplicationFactory factory) : ICla
         var user = new User { Name = "Test", Email = $"test_{Guid.NewGuid()}@example.com", PasswordHash = "hash", Role = UserRole.Customer };
         db.Users.Add(user);
 
-        var tag = new Tag { TagId = tagId, Status = status, Epc = $"EPC-{tagId}" };
+        var tag = new Tag { Status = status, Epc = $"EPC-{Guid.NewGuid()}", Tid = $"TID-{Guid.NewGuid()}" };
         db.Tags.Add(tag);
 
-        db.Vehicles.Add(new Vehicle { UserId = user.UserId, TagId = tagId, Plate = $"TST{Guid.NewGuid().ToString()[..4]}", Brand = "VW", Model = "Gol" });
+        db.Vehicles.Add(new Vehicle { UserId = user.UserId, TagId = tag.TagId, Plate = $"TST{Guid.NewGuid().ToString()[..4].ToUpper()}", Brand = "VW", Model = "Gol" });
 
         await db.SaveChangesAsync();
+        return tag.TagId;
     }
 
-    private async Task SeedAccessAsync(string tagId, AccessType type)
+    private async Task SeedAccessAsync(Guid tagId, AccessType type)
     {
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -61,9 +62,7 @@ public class AccessesControllerTests(CustomWebApplicationFactory factory) : ICla
     [Fact]
     public async Task PostEntry_WithValidTag_ReturnsCreated()
     {
-
-        var tagId = "VALID-TAG";
-        await SeedVehicleAndTagAsync(tagId);
+        var tagId = await SeedVehicleAndTagAsync();
         var payload = new CreateAccessDto { TagId = tagId };
 
 
@@ -80,9 +79,7 @@ public class AccessesControllerTests(CustomWebApplicationFactory factory) : ICla
     [Fact]
     public async Task PostEntry_WhenAlreadyInside_ReturnsConflict()
     {
-
-        var tagId = "DOUBLE-ENTRY-TAG";
-        await SeedVehicleAndTagAsync(tagId);
+        var tagId = await SeedVehicleAndTagAsync();
         var payload = new CreateAccessDto { TagId = tagId };
 
 
@@ -98,9 +95,7 @@ public class AccessesControllerTests(CustomWebApplicationFactory factory) : ICla
     [Fact]
     public async Task PostExit_WhenSuccessfullyEntered_ReturnsCreated()
     {
-
-        var tagId = "FULL-CYCLE-TAG";
-        await SeedVehicleAndTagAsync(tagId);
+        var tagId = await SeedVehicleAndTagAsync();
         var payload = new CreateAccessDto { TagId = tagId };
 
 
@@ -118,9 +113,7 @@ public class AccessesControllerTests(CustomWebApplicationFactory factory) : ICla
     [Fact]
     public async Task PostExit_WithoutPriorEntry_ReturnsConflict()
     {
-
-        var tagId = "EXIT-ONLY-TAG";
-        await SeedVehicleAndTagAsync(tagId);
+        var tagId = await SeedVehicleAndTagAsync();
         var payload = new CreateAccessDto { TagId = tagId };
 
 
@@ -133,8 +126,7 @@ public class AccessesControllerTests(CustomWebApplicationFactory factory) : ICla
     [Fact]
     public async Task PostEntry_WithNonExistentTag_ReturnsNotFound()
     {
-
-        var payload = new CreateAccessDto { TagId = "GHOST-TAG" };
+        var payload = new CreateAccessDto { TagId = Guid.NewGuid() };
 
 
         var response = await _client.PostAsync("/api/accesses/entry", JsonContent.Create(payload, options: CustomWebApplicationFactory.JsonOptions));
@@ -146,9 +138,7 @@ public class AccessesControllerTests(CustomWebApplicationFactory factory) : ICla
     [Fact]
     public async Task PostEntry_WithInactiveTag_ReturnsConflict()
     {
-
-        var tagId = "INACTIVE-ENTRY-TAG";
-        await SeedVehicleAndTagAsync(tagId, TagStatus.INACTIVE);
+        var tagId = await SeedVehicleAndTagAsync(TagStatus.INACTIVE);
         var payload = new CreateAccessDto { TagId = tagId };
 
 
@@ -161,9 +151,7 @@ public class AccessesControllerTests(CustomWebApplicationFactory factory) : ICla
     [Fact]
     public async Task PostExit_WithInactiveTag_ReturnsConflict()
     {
-
-        var tagId = "INACTIVE-EXIT-TAG";
-        await SeedVehicleAndTagAsync(tagId, TagStatus.INACTIVE);
+        var tagId = await SeedVehicleAndTagAsync(TagStatus.INACTIVE);
         await SeedAccessAsync(tagId, AccessType.Entry);
         var payload = new CreateAccessDto { TagId = tagId };
 

@@ -15,8 +15,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Backend.Database.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260511230519_FixTagVehicleRelation")]
-    partial class FixTagVehicleRelation
+    [Migration("20260513022633_SyncModelsToSchema")]
+    partial class SyncModelsToSchema
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -48,11 +48,6 @@ namespace Backend.Database.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("tag_id");
 
-                    b.Property<string>("Tid")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("tid");
-
                     b.Property<DateTime>("Timestamp")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
@@ -78,12 +73,12 @@ namespace Backend.Database.Migrations
                     b.ToTable("accesses", (string)null);
                 });
 
-            modelBuilder.Entity("Backend.Features.ParkingSettings.ParkingSettings", b =>
+            modelBuilder.Entity("Backend.Features.ParkingPrices.ParkingPrice", b =>
                 {
-                    b.Property<Guid>("ParkingSettingsId")
+                    b.Property<Guid>("ParkingPriceId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
-                        .HasColumnName("parking_settings_id");
+                        .HasColumnName("parking_price_id");
 
                     b.Property<decimal>("BasePrice")
                         .ValueGeneratedOnAdd()
@@ -103,6 +98,12 @@ namespace Backend.Database.Migrations
                         .HasDefaultValue(5.00m)
                         .HasColumnName("hourly_rate");
 
+                    b.Property<int>("ThresholdMinutes")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(180)
+                        .HasColumnName("threshold_minutes");
+
                     b.Property<int>("ToleranceMinutes")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
@@ -115,10 +116,10 @@ namespace Backend.Database.Migrations
                         .HasColumnName("updated_at")
                         .HasDefaultValueSql("now()");
 
-                    b.HasKey("ParkingSettingsId")
-                        .HasName("pk_parking_settings");
+                    b.HasKey("ParkingPriceId")
+                        .HasName("pk_parking_prices");
 
-                    b.ToTable("parking_settings", (string)null);
+                    b.ToTable("parking_prices", (string)null);
                 });
 
             modelBuilder.Entity("Backend.Features.Tags.Tag", b =>
@@ -159,10 +160,7 @@ namespace Backend.Database.Migrations
                     b.HasKey("TagId")
                         .HasName("pk_tags");
 
-                    b.HasAlternateKey("Tid")
-                        .HasName("ak_tags_tid");
-
-                    b.ToTable("Tags", (string)null);
+                    b.ToTable("tags", (string)null);
                 });
 
             modelBuilder.Entity("Backend.Features.Transactions.Transaction", b =>
@@ -288,8 +286,8 @@ namespace Backend.Database.Migrations
                         .HasColumnType("text")
                         .HasColumnName("plate");
 
-                    b.Property<string>("TagId")
-                        .HasColumnType("text")
+                    b.Property<Guid?>("TagId")
+                        .HasColumnType("uuid")
                         .HasColumnName("tag_id");
 
                     b.Property<DateTime>("UpdatedAt")
@@ -347,7 +345,6 @@ namespace Backend.Database.Migrations
                     b.HasOne("Backend.Features.Tags.Tag", "Tag")
                         .WithOne("Vehicle")
                         .HasForeignKey("Backend.Features.Vehicles.Vehicle", "TagId")
-                        .HasPrincipalKey("Backend.Features.Tags.Tag", "Tid")
                         .HasConstraintName("fk_vehicles_tags_tag_id");
 
                     b.HasOne("Backend.Features.Users.User", "User")

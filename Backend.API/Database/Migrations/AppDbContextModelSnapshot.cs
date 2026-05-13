@@ -11,7 +11,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Backend.Migrations
+namespace Backend.Database.Migrations
 {
     [DbContext(typeof(AppDbContext))]
     partial class AppDbContextModelSnapshot : ModelSnapshot
@@ -41,9 +41,8 @@ namespace Backend.Migrations
                         .HasColumnName("created_at")
                         .HasDefaultValueSql("now()");
 
-                    b.Property<string>("TagId")
-                        .IsRequired()
-                        .HasColumnType("text")
+                    b.Property<Guid>("TagId")
+                        .HasColumnType("uuid")
                         .HasColumnName("tag_id");
 
                     b.Property<DateTime>("Timestamp")
@@ -71,12 +70,12 @@ namespace Backend.Migrations
                     b.ToTable("accesses", (string)null);
                 });
 
-            modelBuilder.Entity("Backend.Features.ParkingSettings.ParkingSettings", b =>
+            modelBuilder.Entity("Backend.Features.ParkingPrices.ParkingPrice", b =>
                 {
-                    b.Property<Guid>("ParkingSettingsId")
+                    b.Property<Guid>("ParkingPriceId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
-                        .HasColumnName("parking_settings_id");
+                        .HasColumnName("parking_price_id");
 
                     b.Property<decimal>("BasePrice")
                         .ValueGeneratedOnAdd()
@@ -96,6 +95,12 @@ namespace Backend.Migrations
                         .HasDefaultValue(5.00m)
                         .HasColumnName("hourly_rate");
 
+                    b.Property<int>("ThresholdMinutes")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(180)
+                        .HasColumnName("threshold_minutes");
+
                     b.Property<int>("ToleranceMinutes")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
@@ -108,16 +113,17 @@ namespace Backend.Migrations
                         .HasColumnName("updated_at")
                         .HasDefaultValueSql("now()");
 
-                    b.HasKey("ParkingSettingsId")
-                        .HasName("pk_parking_settings");
+                    b.HasKey("ParkingPriceId")
+                        .HasName("pk_parking_prices");
 
-                    b.ToTable("parking_settings", (string)null);
+                    b.ToTable("parking_prices", (string)null);
                 });
 
             modelBuilder.Entity("Backend.Features.Tags.Tag", b =>
                 {
-                    b.Property<string>("TagId")
-                        .HasColumnType("text")
+                    b.Property<Guid>("TagId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
                         .HasColumnName("tag_id");
 
                     b.Property<DateTime>("CreatedAt")
@@ -137,6 +143,11 @@ namespace Backend.Migrations
                         .HasDefaultValue(0)
                         .HasColumnName("status");
 
+                    b.Property<string>("Tid")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("tid");
+
                     b.Property<DateTime>("UpdatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
@@ -146,7 +157,7 @@ namespace Backend.Migrations
                     b.HasKey("TagId")
                         .HasName("pk_tags");
 
-                    b.ToTable("Tags", (string)null);
+                    b.ToTable("tags", (string)null);
                 });
 
             modelBuilder.Entity("Backend.Features.Transactions.Transaction", b =>
@@ -272,8 +283,8 @@ namespace Backend.Migrations
                         .HasColumnType("text")
                         .HasColumnName("plate");
 
-                    b.Property<string>("TagId")
-                        .HasColumnType("text")
+                    b.Property<Guid?>("TagId")
+                        .HasColumnType("uuid")
                         .HasColumnName("tag_id");
 
                     b.Property<DateTime>("UpdatedAt")

@@ -53,7 +53,7 @@ public class TagControllerTests(CustomWebApplicationFactory factory) : IClassFix
     [Fact]
     public async Task CreateTag_ShouldReturnCreatedTag()
     {
-        var newTag = new CreateTagDto { TagId = "TAG-001", Epc = "EPC-001" };
+        var newTag = new CreateTagDto { Epc = "EPC-001", Tid = "TID-001" };
 
         var response = await _client.PostAsync("/api/tags", JsonContent.Create(newTag));
 
@@ -61,7 +61,7 @@ public class TagControllerTests(CustomWebApplicationFactory factory) : IClassFix
 
         var createdTag = await response.Content.ReadFromJsonAsync<TagDto>();
         Assert.NotNull(createdTag);
-        Assert.Equal(newTag.TagId, createdTag.TagId);
+        Assert.NotEqual(Guid.Empty, createdTag.TagId);
         Assert.Equal("AVAILABLE", createdTag.Status);
         Assert.Equal(Guid.Empty, createdTag.VehicleId ?? Guid.Empty);
     }
@@ -69,7 +69,7 @@ public class TagControllerTests(CustomWebApplicationFactory factory) : IClassFix
     [Fact]
     public async Task GetAllTags_ShouldReturnCreatedTag()
     {
-        var newTag = new CreateTagDto { TagId = "TAG-002", Epc = "EPC-002" };
+        var newTag = new CreateTagDto { Epc = "EPC-002", Tid = "TID-002" };
 
         var createResponse = await _client.PostAsync("/api/tags", JsonContent.Create(newTag));
         Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
@@ -81,18 +81,18 @@ public class TagControllerTests(CustomWebApplicationFactory factory) : IClassFix
         var tags = await response.Content.ReadFromJsonAsync<List<TagListDto>>();
         Assert.NotNull(tags);
 
-        var tag = Assert.Single(tags, t => t.Id == newTag.TagId);
+        var tag = Assert.Single(tags, t => t.Epc == newTag.Epc);
         Assert.Equal("AVAILABLE", tag.Status);
     }
 
     [Fact]
     public async Task GetAllTags_WithStatusFilter_ShouldReturnOnlyMatchingTags()
     {
-        var availableTagId = "TAG-012";
-        var inactiveTagId = "TAG-013";
+        var availableTag = new Tag { Status = Backend.Features.Tags.Enums.TagStatus.AVAILABLE, Epc = "EPC-012", Tid = "TID-012" };
+        var inactiveTag = new Tag { Status = Backend.Features.Tags.Enums.TagStatus.INACTIVE, Epc = "EPC-013", Tid = "TID-013" };
 
-        await SeedTagAsync(new Tag { TagId = availableTagId, Status = Backend.Features.Tags.Enums.TagStatus.AVAILABLE, Epc = "EPC-012" });
-        await SeedTagAsync(new Tag { TagId = inactiveTagId, Status = Backend.Features.Tags.Enums.TagStatus.INACTIVE, Epc = "EPC-013" });
+        await SeedTagAsync(availableTag);
+        await SeedTagAsync(inactiveTag);
 
         var response = await _client.GetAsync("/api/tags?status=AVAILABLE");
 
@@ -102,14 +102,14 @@ public class TagControllerTests(CustomWebApplicationFactory factory) : IClassFix
         Assert.NotNull(tags);
 
         Assert.Single(tags);
-        Assert.Equal(availableTagId, tags[0].Id);
+        Assert.Equal(availableTag.TagId, tags[0].TagId);
         Assert.Equal("AVAILABLE", tags[0].Status);
     }
 
     [Fact]
     public async Task CreateTag_WhenTagAlreadyExists_ShouldReturnConflict()
     {
-        var newTag = new CreateTagDto { TagId = "TAG-003", Epc = "EPC-003" };
+        var newTag = new CreateTagDto { Epc = "EPC-003", Tid = "TID-003" };
 
         var firstResponse = await _client.PostAsync("/api/tags", JsonContent.Create(newTag));
         Assert.Equal(HttpStatusCode.Created, firstResponse.StatusCode);
@@ -130,7 +130,7 @@ public class TagControllerTests(CustomWebApplicationFactory factory) : IClassFix
     [Fact]
     public async Task DeactivateTag_ShouldReturnNotFound_WhenTagDoesNotExist()
     {
-        var response = await _client.PatchAsync("/api/tags/TAG-404/deactivate", null);
+        var response = await _client.PatchAsync($"/api/tags/{Guid.NewGuid()}/deactivate", null);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -138,16 +138,16 @@ public class TagControllerTests(CustomWebApplicationFactory factory) : IClassFix
     [Fact]
     public async Task DeactivateTag_ShouldDeactivateExistingTag()
     {
-        var tagId = "TAG-005";
-        await SeedTagAsync(new Tag { TagId = tagId, Status = Backend.Features.Tags.Enums.TagStatus.AVAILABLE, Epc = "EPC-005" });
+        var seeded = new Tag { Status = Backend.Features.Tags.Enums.TagStatus.AVAILABLE, Epc = "EPC-005", Tid = "TID-005" };
+        await SeedTagAsync(seeded);
 
-        var response = await _client.PatchAsync($"/api/tags/{tagId}/deactivate", null);
+        var response = await _client.PatchAsync($"/api/tags/{seeded.TagId}/deactivate", null);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var tag = await response.Content.ReadFromJsonAsync<TagDto>();
         Assert.NotNull(tag);
-        Assert.Equal(tagId, tag.TagId);
+        Assert.Equal(seeded.TagId, tag.TagId);
         Assert.Equal("INACTIVE", tag.Status);
     }
 
@@ -166,16 +166,16 @@ public class TagControllerTests(CustomWebApplicationFactory factory) : IClassFix
         };
         await SeedVehicleAsync(vehicle);
 
-        var tagId = "TAG-006";
-        await SeedTagAsync(new Tag { TagId = tagId, Status = Backend.Features.Tags.Enums.TagStatus.AVAILABLE, Epc = "EPC-006" });
+        var seeded = new Tag { Status = Backend.Features.Tags.Enums.TagStatus.AVAILABLE, Epc = "EPC-006", Tid = "TID-006" };
+        await SeedTagAsync(seeded);
 
-        var response = await _client.PatchAsJsonAsync($"/api/tags/{tagId}/assign-vehicle", new AssignVehicleDto { VehicleId = vehicle.VehicleId });
+        var response = await _client.PatchAsJsonAsync($"/api/tags/{seeded.TagId}/assign-vehicle", new AssignVehicleDto { VehicleId = vehicle.VehicleId });
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var tag = await response.Content.ReadFromJsonAsync<TagDto>();
         Assert.NotNull(tag);
-        Assert.Equal(tagId, tag.TagId);
+        Assert.Equal(seeded.TagId, tag.TagId);
         Assert.Equal("IN_USE", tag.Status);
         Assert.Equal(vehicle.VehicleId, tag.VehicleId);
     }
@@ -195,16 +195,16 @@ public class TagControllerTests(CustomWebApplicationFactory factory) : IClassFix
         };
         await SeedVehicleAsync(vehicle);
 
-        var firstTagId = "TAG-007";
-        var secondTagId = "TAG-008";
+        var firstTag = new Tag { Status = Backend.Features.Tags.Enums.TagStatus.AVAILABLE, Epc = "EPC-007", Tid = "TID-007" };
+        var secondTag = new Tag { Status = Backend.Features.Tags.Enums.TagStatus.AVAILABLE, Epc = "EPC-008", Tid = "TID-008" };
 
-        await SeedTagAsync(new Tag { TagId = firstTagId, Status = Backend.Features.Tags.Enums.TagStatus.AVAILABLE, Epc = "EPC-007" });
-        await SeedTagAsync(new Tag { TagId = secondTagId, Status = Backend.Features.Tags.Enums.TagStatus.AVAILABLE, Epc = "EPC-008" });
+        await SeedTagAsync(firstTag);
+        await SeedTagAsync(secondTag);
 
-        var firstResponse = await _client.PatchAsJsonAsync($"/api/tags/{firstTagId}/assign-vehicle", new AssignVehicleDto { VehicleId = vehicle.VehicleId });
+        var firstResponse = await _client.PatchAsJsonAsync($"/api/tags/{firstTag.TagId}/assign-vehicle", new AssignVehicleDto { VehicleId = vehicle.VehicleId });
         Assert.Equal(HttpStatusCode.OK, firstResponse.StatusCode);
 
-        var secondResponse = await _client.PatchAsJsonAsync($"/api/tags/{secondTagId}/assign-vehicle", new AssignVehicleDto { VehicleId = vehicle.VehicleId });
+        var secondResponse = await _client.PatchAsJsonAsync($"/api/tags/{secondTag.TagId}/assign-vehicle", new AssignVehicleDto { VehicleId = vehicle.VehicleId });
 
         Assert.Equal(HttpStatusCode.Conflict, secondResponse.StatusCode);
     }
@@ -224,16 +224,16 @@ public class TagControllerTests(CustomWebApplicationFactory factory) : IClassFix
         };
         await SeedVehicleAsync(vehicle);
 
-        var tagId = "TAG-009";
-        await SeedTagAsync(new Tag
+        var seeded = new Tag
         {
-            TagId = tagId,
             Status = Backend.Features.Tags.Enums.TagStatus.IN_USE,
             Epc = "EPC-009",
+            Tid = "TID-009",
             Vehicle = vehicle
-        });
+        };
+        await SeedTagAsync(seeded);
 
-        var response = await _client.PatchAsJsonAsync($"/api/tags/{tagId}/assign-vehicle", new AssignVehicleDto { VehicleId = vehicle.VehicleId });
+        var response = await _client.PatchAsJsonAsync($"/api/tags/{seeded.TagId}/assign-vehicle", new AssignVehicleDto { VehicleId = vehicle.VehicleId });
 
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
     }
@@ -253,15 +253,15 @@ public class TagControllerTests(CustomWebApplicationFactory factory) : IClassFix
         };
         await SeedVehicleAsync(vehicle);
 
-        var tagId = "TAG-010";
-        await SeedTagAsync(new Tag
+        var seeded = new Tag
         {
-            TagId = tagId,
             Status = Backend.Features.Tags.Enums.TagStatus.INACTIVE,
-            Epc = "EPC-010"
-        });
+            Epc = "EPC-010",
+            Tid = "TID-010"
+        };
+        await SeedTagAsync(seeded);
 
-        var response = await _client.PatchAsJsonAsync($"/api/tags/{tagId}/assign-vehicle", new AssignVehicleDto { VehicleId = vehicle.VehicleId });
+        var response = await _client.PatchAsJsonAsync($"/api/tags/{seeded.TagId}/assign-vehicle", new AssignVehicleDto { VehicleId = vehicle.VehicleId });
 
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
     }
@@ -281,7 +281,7 @@ public class TagControllerTests(CustomWebApplicationFactory factory) : IClassFix
         };
         await SeedVehicleAsync(vehicle);
 
-        var response = await _client.PatchAsJsonAsync("/api/tags/TAG-404/assign-vehicle", new AssignVehicleDto { VehicleId = vehicle.VehicleId });
+        var response = await _client.PatchAsJsonAsync($"/api/tags/{Guid.NewGuid()}/assign-vehicle", new AssignVehicleDto { VehicleId = vehicle.VehicleId });
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -289,10 +289,10 @@ public class TagControllerTests(CustomWebApplicationFactory factory) : IClassFix
     [Fact]
     public async Task AssignVehicle_ShouldReturnNotFound_WhenVehicleDoesNotExist()
     {
-        var tagId = "TAG-011";
-        await SeedTagAsync(new Tag { TagId = tagId, Status = Backend.Features.Tags.Enums.TagStatus.AVAILABLE, Epc = "EPC-011" });
+        var seeded = new Tag { Status = Backend.Features.Tags.Enums.TagStatus.AVAILABLE, Epc = "EPC-011", Tid = "TID-011" };
+        await SeedTagAsync(seeded);
 
-        var response = await _client.PatchAsJsonAsync($"/api/tags/{tagId}/assign-vehicle", new AssignVehicleDto { VehicleId = Guid.NewGuid() });
+        var response = await _client.PatchAsJsonAsync($"/api/tags/{seeded.TagId}/assign-vehicle", new AssignVehicleDto { VehicleId = Guid.NewGuid() });
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }

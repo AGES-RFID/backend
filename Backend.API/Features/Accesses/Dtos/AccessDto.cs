@@ -8,7 +8,7 @@ public class AccessDto
     public Guid AccessId { get; set; }
 
     [JsonPropertyName("tag_id")]
-    public required string TagId { get; set; }
+    public required Guid TagId { get; set; }
 
     public AccessType Type { get; set; }
     public DateTime Timestamp { get; set; }

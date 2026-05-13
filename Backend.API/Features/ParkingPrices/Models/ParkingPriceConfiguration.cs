@@ -1,13 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace Backend.Features.ParkingSettings;
+namespace Backend.Features.ParkingPrices;
 
-public class ParkingSettingsConfiguration : IEntityTypeConfiguration<ParkingSettings>
+public class ParkingPricesConfiguration : IEntityTypeConfiguration<ParkingPrice>
 {
-    public void Configure(EntityTypeBuilder<ParkingSettings> builder)
+    public void Configure(EntityTypeBuilder<ParkingPrice> builder)
     {
-        builder.HasKey(p => p.ParkingSettingsId);
+        builder.HasKey(p => p.ParkingPriceId);
 
         builder.Property(p => p.ToleranceMinutes)
             .IsRequired()
@@ -17,6 +17,10 @@ public class ParkingSettingsConfiguration : IEntityTypeConfiguration<ParkingSett
             .IsRequired()
             .HasColumnType("decimal(14,2)")
             .HasDefaultValue(15.00m);
+
+        builder.Property(p => p.ThresholdMinutes)
+            .IsRequired()
+            .HasDefaultValue(3 * 60);
 
         builder.Property(p => p.HourlyRate)
             .IsRequired()
@@ -33,6 +37,6 @@ public class ParkingSettingsConfiguration : IEntityTypeConfiguration<ParkingSett
             .HasDefaultValueSql("now()")
             .ValueGeneratedOnAdd();
 
-        builder.ToTable("parking_settings");
+        builder.ToTable("parking_prices");
     }
 }

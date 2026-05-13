@@ -4,9 +4,9 @@ using System.ComponentModel.DataAnnotations;
 
 public class CreateTagDto
 {
-    [Required(ErrorMessage = "TagId is required")]
-    public required string TagId { get; set; }
-
-    [Required(ErrorMessage = "Epc is required")]
+    [Required]
     public required string Epc { get; set; }
+
+    [Required]
+    public required string Tid { get; set; }
 }

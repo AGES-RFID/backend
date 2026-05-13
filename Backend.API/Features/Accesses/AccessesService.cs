@@ -74,7 +74,7 @@ public class AccessesService(AppDbContext db) : IAccessesService
         return AccessDto.FromModel(access);
     }
 
-    private async Task<Tag> GetActiveTagAsync(string tagId)
+    private async Task<Tag> GetActiveTagAsync(Guid tagId)
     {
         var tag = await _db.Tags
             .Include(t => t.Vehicle)

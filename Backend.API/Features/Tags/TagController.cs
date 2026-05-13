@@ -51,7 +51,7 @@ public class TagController(ITagService tagService) : ControllerBase
     }
 
     [HttpPatch("{tagId}/deactivate")]
-    public async Task<ActionResult<TagDto>> DeactivateTag(string tagId)
+    public async Task<ActionResult<TagDto>> DeactivateTag(Guid tagId)
     {
         try
         {
@@ -73,7 +73,7 @@ public class TagController(ITagService tagService) : ControllerBase
     }
 
     [HttpPatch("{tagId}/assign-vehicle")]
-    public async Task<ActionResult<TagDto>> AssignVehicle(string tagId, [FromBody] AssignVehicleDto dto)
+    public async Task<ActionResult<TagDto>> AssignVehicle(Guid tagId, [FromBody] AssignVehicleDto dto)
     {
         // Validate payload
         if (!ModelState.IsValid)
@@ -100,4 +100,3 @@ public class TagController(ITagService tagService) : ControllerBase
         }
     }
 }
-
