@@ -131,10 +131,14 @@ builder.Services.AddAuthorization();
 var app = builder.Build();
 
 // Apply pending migrations
-using (var scope = app.Services.CreateScope())
+var skipMigrations = string.Equals(Environment.GetEnvironmentVariable("SKIP_MIGRATIONS"), "true", StringComparison.OrdinalIgnoreCase);
+if (!app.Environment.IsEnvironment("Testing") && !skipMigrations)
 {
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.Migrate();
+    using (var scope = app.Services.CreateScope())
+    {
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        db.Database.Migrate();
+    }
 }
 
 // Configure the HTTP request pipeline

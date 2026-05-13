@@ -22,7 +22,7 @@ public class AccessesService(AppDbContext db) : IAccessesService
 
 
         var lastAccess = await _db.Accesses
-            .Where(a => a.TagId == dto.TagId)
+            .Where(a => a.TagId == tag.TagId)
             .OrderByDescending(a => a.Timestamp)
             .FirstOrDefaultAsync();
 
@@ -32,7 +32,8 @@ public class AccessesService(AppDbContext db) : IAccessesService
 
         var access = new Access
         {
-            TagId = dto.TagId,
+            TagId = tag.TagId,
+
             Type = AccessType.Entry,
             Tag = tag,
             Timestamp = DateTime.UtcNow
@@ -51,7 +52,7 @@ public class AccessesService(AppDbContext db) : IAccessesService
 
 
         var lastAccess = await _db.Accesses
-            .Where(a => a.TagId == dto.TagId)
+            .Where(a => a.TagId == tag.TagId)
             .OrderByDescending(a => a.Timestamp)
             .FirstOrDefaultAsync();
 
@@ -61,7 +62,7 @@ public class AccessesService(AppDbContext db) : IAccessesService
 
         var access = new Access
         {
-            TagId = dto.TagId,
+            TagId = tag.TagId,
             Type = AccessType.Exit,
             Tag = tag,
             Timestamp = DateTime.UtcNow
@@ -73,7 +74,7 @@ public class AccessesService(AppDbContext db) : IAccessesService
         return AccessDto.FromModel(access);
     }
 
-    private async Task<Tag> GetActiveTagAsync(string tagId)
+    private async Task<Tag> GetActiveTagAsync(Guid tagId)
     {
         var tag = await _db.Tags
             .Include(t => t.Vehicle)

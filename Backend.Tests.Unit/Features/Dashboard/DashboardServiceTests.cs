@@ -16,17 +16,12 @@ public class DashboardServiceTests
         return new AppDbContext(options);
     }
 
-    private static Tag CreateTag(string tagId = "TAG001") => new()
-    {
-        TagId = tagId
-    };
-
-    private static Access CreateAccess(string tagId, AccessType type, DateTime timestamp) => new()
+    private static Access CreateAccess(Guid tagId, AccessType type, DateTime timestamp) => new()
     {
         TagId = tagId,
         Type = type,
         Timestamp = timestamp,
-        Tag = new Tag { TagId = tagId }
+        Tag = new Tag { TagId = tagId, Epc = $"EPC-{tagId}", Tid = $"TID-{tagId}" }
     };
 
     [Fact]
@@ -48,9 +43,9 @@ public class DashboardServiceTests
         var db = CreateInMemoryDb();
         var now = DateTime.UtcNow;
 
-        db.Accesses.Add(CreateAccess("TAG001", AccessType.Entry, now.AddMinutes(-10)));
-        db.Accesses.Add(CreateAccess("TAG002", AccessType.Entry, now.AddMinutes(-30)));
-        db.Accesses.Add(CreateAccess("TAG003", AccessType.Entry, now.AddHours(-2)));
+        db.Accesses.Add(CreateAccess(Guid.NewGuid(), AccessType.Entry, now.AddMinutes(-10)));
+        db.Accesses.Add(CreateAccess(Guid.NewGuid(), AccessType.Entry, now.AddMinutes(-30)));
+        db.Accesses.Add(CreateAccess(Guid.NewGuid(), AccessType.Entry, now.AddHours(-2)));
         await db.SaveChangesAsync();
 
         var service = new DashboardService(db);
@@ -65,9 +60,9 @@ public class DashboardServiceTests
         var db = CreateInMemoryDb();
         var now = DateTime.UtcNow;
 
-        db.Accesses.Add(CreateAccess("TAG001", AccessType.Exit, now.AddMinutes(-15)));
-        db.Accesses.Add(CreateAccess("TAG002", AccessType.Exit, now.AddMinutes(-45)));
-        db.Accesses.Add(CreateAccess("TAG003", AccessType.Exit, now.AddHours(-3)));
+        db.Accesses.Add(CreateAccess(Guid.NewGuid(), AccessType.Exit, now.AddMinutes(-15)));
+        db.Accesses.Add(CreateAccess(Guid.NewGuid(), AccessType.Exit, now.AddMinutes(-45)));
+        db.Accesses.Add(CreateAccess(Guid.NewGuid(), AccessType.Exit, now.AddHours(-3)));
         await db.SaveChangesAsync();
 
         var service = new DashboardService(db);
@@ -83,10 +78,10 @@ public class DashboardServiceTests
         var now = DateTime.UtcNow;
         var peakHour = new DateTime(now.Year, now.Month, now.Day, now.Hour, 0, 0, DateTimeKind.Utc).AddHours(-2);
 
-        db.Accesses.Add(CreateAccess("TAG001", AccessType.Entry, peakHour));
-        db.Accesses.Add(CreateAccess("TAG002", AccessType.Entry, peakHour.AddMinutes(10)));
-        db.Accesses.Add(CreateAccess("TAG003", AccessType.Entry, peakHour.AddMinutes(20)));
-        db.Accesses.Add(CreateAccess("TAG004", AccessType.Entry, now.AddMinutes(-5)));
+        db.Accesses.Add(CreateAccess(Guid.NewGuid(), AccessType.Entry, peakHour));
+        db.Accesses.Add(CreateAccess(Guid.NewGuid(), AccessType.Entry, peakHour.AddMinutes(10)));
+        db.Accesses.Add(CreateAccess(Guid.NewGuid(), AccessType.Entry, peakHour.AddMinutes(20)));
+        db.Accesses.Add(CreateAccess(Guid.NewGuid(), AccessType.Entry, now.AddMinutes(-5)));
         await db.SaveChangesAsync();
 
         var service = new DashboardService(db);
@@ -102,8 +97,8 @@ public class DashboardServiceTests
         var db = CreateInMemoryDb();
         var now = DateTime.UtcNow;
 
-        db.Accesses.Add(CreateAccess("TAG001", AccessType.Exit, now.AddMinutes(-10)));
-        db.Accesses.Add(CreateAccess("TAG002", AccessType.Exit, now.AddMinutes(-20)));
+        db.Accesses.Add(CreateAccess(Guid.NewGuid(), AccessType.Exit, now.AddMinutes(-10)));
+        db.Accesses.Add(CreateAccess(Guid.NewGuid(), AccessType.Exit, now.AddMinutes(-20)));
         await db.SaveChangesAsync();
 
         var service = new DashboardService(db);
@@ -119,8 +114,8 @@ public class DashboardServiceTests
         var db = CreateInMemoryDb();
         var now = DateTime.UtcNow;
 
-        db.Accesses.Add(CreateAccess("TAG001", AccessType.Entry, now.AddHours(-25)));
-        db.Accesses.Add(CreateAccess("TAG002", AccessType.Entry, now.AddHours(-30)));
+        db.Accesses.Add(CreateAccess(Guid.NewGuid(), AccessType.Entry, now.AddHours(-25)));
+        db.Accesses.Add(CreateAccess(Guid.NewGuid(), AccessType.Entry, now.AddHours(-30)));
         await db.SaveChangesAsync();
 
         var service = new DashboardService(db);

@@ -13,8 +13,8 @@ public interface ITagService
 {
     Task<TagDto> CreateTagAsync(CreateTagDto dto);
     Task<IEnumerable<TagListDto>> GetAllTagsAsync(string? status);
-    Task<TagDto> DeactivateTagAsync(string tagId);
-    Task<TagDto> AssignVehicleAsync(string tagId, AssignVehicleDto dto);
+    Task<TagDto> DeactivateTagAsync(Guid tagId);
+    Task<TagDto> AssignVehicleAsync(Guid tagId, AssignVehicleDto dto);
 }
 
 public class TagService(AppDbContext db) : ITagService
@@ -23,16 +23,22 @@ public class TagService(AppDbContext db) : ITagService
 
     public async Task<TagDto> CreateTagAsync(CreateTagDto dto)
     {
-        // Check if tag already exists
-        var existingTag = await _db.Tags.FirstOrDefaultAsync(t => t.TagId == dto.TagId);
-        if (existingTag != null)
+        var existingTid = await _db.Tags.FirstOrDefaultAsync(t => t.Tid == dto.Tid);
+        if (existingTid != null)
         {
-            throw new TagConflictException($"A tag with id '{dto.TagId}' already exists");
+            throw new TagConflictException($"A tag with TID '{dto.Tid}' already exists");
+        }
+
+        var existingEpc = await _db.Tags.FirstOrDefaultAsync(t => t.Epc == dto.Epc);
+        if (existingEpc != null)
+        {
+            throw new TagConflictException($"A tag with Epc '{dto.Epc}' already exists");
         }
 
         var tag = new Tag
         {
-            TagId = dto.TagId,
+            Epc = dto.Epc,
+            Tid = dto.Tid,
             Status = TagStatus.AVAILABLE
         };
 
@@ -50,7 +56,7 @@ public class TagService(AppDbContext db) : ITagService
         {
             if (!Enum.TryParse<TagStatus>(status, ignoreCase: true, out var parsedStatus))
             {
-                throw new ArgumentException($"Invalid status value. Must be one of: {string.Join(", ", Enum.GetNames(typeof(TagStatus)))}");
+                throw new ArgumentException($"Invalid status value. Must be one of: {string.Join(", ", Enum.GetNames<TagStatus>())}");
             }
             filterStatus = parsedStatus;
         }
@@ -59,7 +65,9 @@ public class TagService(AppDbContext db) : ITagService
             .Where(t => !filterStatus.HasValue || t.Status == filterStatus.Value)
             .Select(t => new TagListDto
             {
-                Id = t.TagId,
+                TagId = t.TagId,
+                Epc = t.Epc,
+                Tid = t.Tid,
                 UserName = t.Vehicle != null ? t.Vehicle.User!.Name : null,
                 Plate = t.Vehicle != null ? t.Vehicle.Plate : null,
                 Status = t.Status.ToString()
@@ -69,7 +77,7 @@ public class TagService(AppDbContext db) : ITagService
         return tags;
     }
 
-    public async Task<TagDto> DeactivateTagAsync(string tagId)
+    public async Task<TagDto> DeactivateTagAsync(Guid tagId)
     {
         var tag = await _db.Tags
             .Include(t => t.Vehicle)
@@ -95,7 +103,7 @@ public class TagService(AppDbContext db) : ITagService
         return TagDto.FromModel(tag);
     }
 
-    public async Task<TagDto> AssignVehicleAsync(string tagId, AssignVehicleDto dto)
+    public async Task<TagDto> AssignVehicleAsync(Guid tagId, AssignVehicleDto dto)
     {
         var tag = await _db.Tags.FirstOrDefaultAsync(t => t.TagId == tagId)
             ?? throw new KeyNotFoundException($"Tag with id {tagId} not found");
@@ -117,7 +125,7 @@ public class TagService(AppDbContext db) : ITagService
         }
 
         // Check if vehicle already has a tag assigned
-        if (!string.IsNullOrWhiteSpace(vehicle.TagId))
+        if (vehicle.TagId != null)
         {
             throw new TagConflictException($"Vehicle already has a tag assigned");
         }
