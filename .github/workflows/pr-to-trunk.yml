@@ -2,7 +2,7 @@ name: PR to Trunk
 
 on:
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
   workflow_dispatch:
 
 concurrency:
@@ -10,6 +10,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  gitlab-sync:
+    name: GitLab Sync
+    uses: AGES-RFID/cicd/.github/workflows/gitlab-sync.yml@main
+    secrets:
+      gitlab_token: ${{ secrets.GITLAB_TOKEN }}
+
   validate:
     name: CI
     uses: AGES-RFID/cicd/.github/workflows/ci-dotnet.yml@main

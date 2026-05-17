@@ -2,10 +2,20 @@ name: Push on Trunk
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   workflow_dispatch:
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
+  gitlab-sync:
+    name: GitLab Sync
+    uses: AGES-RFID/cicd/.github/workflows/gitlab-sync.yml@main
+    secrets:
+      gitlab_token: ${{ secrets.GITLAB_TOKEN }}
+
   validate:
     name: CI
     uses: AGES-RFID/cicd/.github/workflows/ci-dotnet.yml@main
@@ -18,8 +28,9 @@ jobs:
   deploy-staging:
     name: CD Staging
     needs: [validate]
-    uses: AGES-RFID/cicd/.github/workflows/deployment.yml@main
+    uses: AGES-RFID/cicd/.github/workflows/cd-lambda.yml@main
     with:
-      environment: 'staging'
+      environment: "staging"
       version: ${{ github.sha }}
+      role-to-assume: "arn:aws:iam::507099298238:role/ages-rfid-cicd-role"
     secrets: inherit
