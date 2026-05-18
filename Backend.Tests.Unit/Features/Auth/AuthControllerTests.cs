@@ -1,5 +1,6 @@
 using Backend.Features.Auth;
 using Backend.Features.Users;
+using Backend.Features.Vehicles;
 using Microsoft.AspNetCore.Mvc;
 using NSubstitute;
 
@@ -72,7 +73,7 @@ public class AuthControllerTests
     public async Task Login_ReturnsValidJwtToken()
     {
         var dto = new LoginDto { Email = "user@example.com", Password = "password123" };
-        var expectedUser = new UserDto { UserId = Guid.NewGuid(), Name = "Test User", Email = dto.Email, Role = UserRole.User };
+        var expectedUser = new UserDto { UserId = Guid.NewGuid(), Name = "Test User", Email = dto.Email, Role = UserRole.Customer };
         var expectedResponse = new AuthResponse { Token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.abc.def", User = expectedUser };
 
         var authService = Substitute.For<IAuthService>();

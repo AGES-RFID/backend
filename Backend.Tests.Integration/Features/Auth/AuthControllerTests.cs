@@ -83,7 +83,7 @@ public class AuthControllerTests(CustomWebApplicationFactory factory) : IClassFi
     public async Task Login_MultipleUsers_CanLoginWithDifferentCredentials()
     {
         var user1Dto = new CreateUserDto { Name = "User One", Email = "user1@example.com", Password = "password1", Role = UserRole.Admin };
-        var user2Dto = new CreateUserDto { Name = "User Two", Email = "user2@example.com", Password = "password2", Role = UserRole.User };
+        var user2Dto = new CreateUserDto { Name = "User Two", Email = "user2@example.com", Password = "password2", Role = UserRole.Customer };
 
         await _client.PostAsync("/api/users", JsonContent.Create(user1Dto, options: CustomWebApplicationFactory.JsonOptions));
         await _client.PostAsync("/api/users", JsonContent.Create(user2Dto, options: CustomWebApplicationFactory.JsonOptions));
