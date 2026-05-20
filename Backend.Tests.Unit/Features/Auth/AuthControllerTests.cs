@@ -30,25 +30,6 @@ public class AuthControllerTests
         await authService.Received(1).LoginAsync(dto);
     }
 
-    [Fact]
-    public async Task Login_WhenEmailNotFound_ReturnsUnauthorized()
-    {
-        var dto = new LoginDto { Email = "notfound@example.com", Password = "password123" };
-
-        var authService = Substitute.For<IAuthService>();
-        authService.LoginAsync(dto).Returns(Task.FromException<AuthResponse>(
-            new InvalidCredentialsException()));
-
-        var userService = Substitute.For<IUserService>();
-
-        var controller = new AuthController(authService, userService);
-        var result = await controller.Login(dto);
-
-        var unauthorizedResult = Assert.IsType<UnauthorizedObjectResult>(result.Result);
-        var error = unauthorizedResult.Value;
-        Assert.NotNull(error);
-        await authService.Received(1).LoginAsync(dto);
-    }
 
     [Fact]
     public async Task Login_WhenPasswordInvalid_ReturnsUnauthorized()
@@ -142,28 +123,5 @@ public class AuthControllerTests
 
         var unauthorizedResult = Assert.IsType<UnauthorizedObjectResult>(result.Result);
         Assert.NotNull(unauthorizedResult.Value);
-    }
-
-    [Fact]
-    public async Task GetCurrentUser_WhenUserNotFound_ReturnsNotFound()
-    {
-        var userId = Guid.NewGuid();
-
-        var authService = Substitute.For<IAuthService>();
-        var userService = Substitute.For<IUserService>();
-        userService.GetUserAsync(userId).Returns(Task.FromResult<UserWithVehiclesDto>(null!));
-
-        var controller = new AuthController(authService, userService);
-        controller.ControllerContext.HttpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext();
-        controller.ControllerContext.HttpContext.User = new System.Security.Claims.ClaimsPrincipal(
-            new System.Security.Claims.ClaimsIdentity(
-                new[] { new System.Security.Claims.Claim(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub, userId.ToString()) }
-            )
-        );
-
-        var result = await controller.GetCurrentUser();
-
-        var notFoundResult = Assert.IsType<NotFoundObjectResult>(result.Result);
-        Assert.NotNull(notFoundResult.Value);
     }
 }

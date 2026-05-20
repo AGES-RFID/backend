@@ -37,11 +37,15 @@ public class AuthController(IAuthService authService, IUserService userService) 
         if (!Guid.TryParse(sub, out var userId))
             return Unauthorized(new { error = "Token inválido" });
 
-        var user = await _userService.GetUserAsync(userId);
-        if (user == null)
+        try
+        {
+            var user = await _userService.GetUserAsync(userId);
+            return Ok(user);
+        }
+        catch (KeyNotFoundException)
+        {
             return NotFound(new { error = "Usuário não encontrado" });
-
-        return Ok(user);
+        }
     }
 
 }

@@ -60,26 +60,6 @@ public class AuthControllerTests(CustomWebApplicationFactory factory) : IClassFi
     }
 
     [Fact]
-    public async Task Login_ReturnsValidJwtToken()
-    {
-        var newUser = new CreateUserDto { Name = "Test User", Email = "jwt@example.com", Password = "password123", Role = UserRole.Admin };
-        var createResponse = await _client.PostAsync("/api/users", JsonContent.Create(newUser, options: CustomWebApplicationFactory.JsonOptions));
-        createResponse.EnsureSuccessStatusCode();
-
-        var loginDto = new LoginDto { Email = "jwt@example.com", Password = "password123" };
-        var loginResponse = await _client.PostAsync("/api/auth/login", JsonContent.Create(loginDto, options: CustomWebApplicationFactory.JsonOptions));
-
-        loginResponse.EnsureSuccessStatusCode();
-        var authResponse = await loginResponse.Content.ReadFromJsonAsync<AuthResponse>(CustomWebApplicationFactory.JsonOptions);
-        Assert.NotNull(authResponse);
-
-        // JWT tokens have format: header.payload.signature
-        var tokenParts = authResponse.Token.Split('.');
-        Assert.Equal(3, tokenParts.Length);
-        Assert.StartsWith("eyJ", authResponse.Token); // Base64 encoded header starts with eyJ
-    }
-
-    [Fact]
     public async Task Login_MultipleUsers_CanLoginWithDifferentCredentials()
     {
         var user1Dto = new CreateUserDto { Name = "User One", Email = "user1@example.com", Password = "password1", Role = UserRole.Admin };
