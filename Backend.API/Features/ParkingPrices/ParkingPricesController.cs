@@ -82,4 +82,3 @@ public class ParkingPricesController(IParkingPricesService parkingPricesService)
         }
     }
 }
-

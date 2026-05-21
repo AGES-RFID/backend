@@ -223,7 +223,6 @@ public class ParkingPricesControllerTests(CustomWebApplicationFactory factory) :
             HourlyRate = 5.00m,
             ThresholdMinutes = 180
         };
-        
         await _client.PostAsync("/api/parking-prices", JsonContent.Create(newPrice1, options: CustomWebApplicationFactory.JsonOptions));
 
         var newPrice2 = new CreateParkingPriceDto
@@ -233,15 +232,13 @@ public class ParkingPricesControllerTests(CustomWebApplicationFactory factory) :
             HourlyRate = 6.00m,
             ThresholdMinutes = 240
         };
-        
         var createResponse2 = await _client.PostAsync("/api/parking-prices", JsonContent.Create(newPrice2, options: CustomWebApplicationFactory.JsonOptions));
         var createdPrice2 = await createResponse2.Content.ReadFromJsonAsync<ParkingPricesDto>(CustomWebApplicationFactory.JsonOptions);
 
         var getResponse = await _client.GetAsync("/parking-pricing");
         getResponse.EnsureSuccessStatusCode();
-        
-        var currentPrice = await getResponse.Content.ReadFromJsonAsync<ParkingPricesDto>(CustomWebApplicationFactory.JsonOptions);
 
+        var currentPrice = await getResponse.Content.ReadFromJsonAsync<ParkingPricesDto>(CustomWebApplicationFactory.JsonOptions);
         Assert.NotNull(currentPrice);
         Assert.Equal(createdPrice2?.ParkingPriceId, currentPrice.ParkingPriceId);
         Assert.Equal(20.00m, currentPrice.BasePrice);
