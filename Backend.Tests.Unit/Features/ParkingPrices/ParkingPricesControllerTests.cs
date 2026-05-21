@@ -232,4 +232,58 @@ public class ParkingPricesControllerTests
         Assert.IsType<NotFoundResult>(result);
         await service.Received(1).DeleteParkingPriceAsync(id);
     }
+    [Fact]
+    public async Task GetCurrentParkingPricing_WhenExists_ReturnsOkWithCurrentPrice()
+    {
+        var expected = new ParkingPricesDto
+        {
+            ParkingPriceId = Guid.NewGuid(),
+            ToleranceMinutes = 15,
+            BasePrice = 15.00m,
+            HourlyRate = 5.00m,
+            ThresholdMinutes = 180,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        var service = Substitute.For<IParkingPricesService>();
+        service.GetCurrentParkingPricingAsync().Returns(expected);
+
+        var controller = new ParkingPricesController(service);
+        var result = await controller.GetCurrentParkingPricing();
+
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        var returnedDto = Assert.IsType<ParkingPricesDto>(okResult.Value);
+        Assert.Equal(expected.ParkingPriceId, returnedDto.ParkingPriceId);
+        await service.Received(1).GetCurrentParkingPricingAsync();
+    }
+
+    [Fact]
+    public async Task GetCurrentParkingPricing_WhenNotExists_ReturnsNotFound()
+    {
+        var service = Substitute.For<IParkingPricesService>();
+        service.GetCurrentParkingPricingAsync().Returns(Task.FromException<ParkingPricesDto>(
+            new KeyNotFoundException("Nenhuma regra de cobrança foi configurada.")));
+
+        var controller = new ParkingPricesController(service);
+        var result = await controller.GetCurrentParkingPricing();
+
+        Assert.IsType<NotFoundResult>(result.Result);
+        await service.Received(1).GetCurrentParkingPricingAsync();
+    }
+
+    [Fact]
+    public async Task GetCurrentParkingPricing_OnException_Returns500()
+    {
+        var service = Substitute.For<IParkingPricesService>();
+        service.GetCurrentParkingPricingAsync().Returns(Task.FromException<ParkingPricesDto>(
+            new Exception("Database error")));
+
+        var controller = new ParkingPricesController(service);
+        var result = await controller.GetCurrentParkingPricing();
+
+        var statusCodeResult = Assert.IsType<StatusCodeResult>(result.Result);
+        Assert.Equal(500, statusCodeResult.StatusCode);
+        await service.Received(1).GetCurrentParkingPricingAsync();
+    }
 }

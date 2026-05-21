@@ -7,6 +7,7 @@ public interface IParkingPricesService
 {
     Task<ParkingPricesDto> GetParkingPriceAsync(Guid id);
     Task<IEnumerable<ParkingPricesDto>> GetAllParkingPricesAsync();
+    Task<ParkingPricesDto> GetCurrentParkingPricingAsync();
     Task<ParkingPricesDto> CreateParkingPriceAsync(CreateParkingPriceDto dto);
     Task<ParkingPricesDto> UpdateParkingPriceAsync(Guid id, UpdateParkingPriceDto dto);
     Task DeleteParkingPriceAsync(Guid id);
@@ -33,6 +34,18 @@ public class ParkingPricesService(AppDbContext db) : IParkingPricesService
             .ToListAsync();
 
         return parkingPrices.Select(ParkingPricesDto.FromModel);
+    }
+
+    public async Task<ParkingPricesDto> GetCurrentParkingPricingAsync()
+    {
+        var parkingPrice = await _db.ParkingPrices
+            .AsNoTracking()
+            .OrderByDescending(p => p.UpdatedAt)
+            .ThenByDescending(p => p.CreatedAt)
+            .FirstOrDefaultAsync()
+            ?? throw new KeyNotFoundException("Nenhuma regra de cobrança foi configurada.");
+
+        return ParkingPricesDto.FromModel(parkingPrice);
     }
 
     public async Task<ParkingPricesDto> CreateParkingPriceAsync(CreateParkingPriceDto dto)
