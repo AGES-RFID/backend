@@ -213,4 +213,44 @@ public class ParkingPricesControllerTests(CustomWebApplicationFactory factory) :
         Assert.NotNull(allPrices);
         Assert.True(allPrices.Count >= 3);
     }
+    [Fact]
+    public async Task GetCurrentParkingPricing_ShouldReturnLatestPrice()
+    {
+        var newPrice1 = new CreateParkingPriceDto
+        {
+            ToleranceMinutes = 15,
+            BasePrice = 15.00m,
+            HourlyRate = 5.00m,
+            ThresholdMinutes = 180
+        };
+        
+        await _client.PostAsync("/api/parking-prices", JsonContent.Create(newPrice1, options: CustomWebApplicationFactory.JsonOptions));
+
+        var newPrice2 = new CreateParkingPriceDto
+        {
+            ToleranceMinutes = 20,
+            BasePrice = 20.00m,
+            HourlyRate = 6.00m,
+            ThresholdMinutes = 240
+        };
+        
+        var createResponse2 = await _client.PostAsync("/api/parking-prices", JsonContent.Create(newPrice2, options: CustomWebApplicationFactory.JsonOptions));
+        var createdPrice2 = await createResponse2.Content.ReadFromJsonAsync<ParkingPricesDto>(CustomWebApplicationFactory.JsonOptions);
+
+        var getResponse = await _client.GetAsync("/parking-pricing");
+        getResponse.EnsureSuccessStatusCode();
+        
+        var currentPrice = await getResponse.Content.ReadFromJsonAsync<ParkingPricesDto>(CustomWebApplicationFactory.JsonOptions);
+
+        Assert.NotNull(currentPrice);
+        Assert.Equal(createdPrice2?.ParkingPriceId, currentPrice.ParkingPriceId);
+        Assert.Equal(20.00m, currentPrice.BasePrice);
+    }
+
+    [Fact]
+    public async Task GetCurrentParkingPricing_WhenNoPrices_ShouldReturnNotFound()
+    {
+        var response = await _client.GetAsync("/parking-pricing");
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
 }

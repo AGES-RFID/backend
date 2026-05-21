@@ -63,4 +63,23 @@ public class ParkingPricesController(IParkingPricesService parkingPricesService)
             return NotFound();
         }
     }
+
+    [HttpGet("/parking-pricing")]
+    public async Task<ActionResult<ParkingPricesDto>> GetCurrentParkingPricing()
+    {
+        try
+        {
+            var currentPricing = await _parkingPricesService.GetCurrentParkingPricingAsync();
+            return Ok(currentPricing);
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (Exception)
+        {
+            return StatusCode(500);
+        }
+    }
 }
+
