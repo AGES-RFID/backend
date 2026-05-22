@@ -1,9 +1,11 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Backend.Features.Vehicles;
 
 [ApiController]
 [Route("api/vehicles")]
+[Authorize]
 public class VehiclesController(IVehicleService vehicleService) : ControllerBase
 {
     private readonly IVehicleService _vehicleService = vehicleService;

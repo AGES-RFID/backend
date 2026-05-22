@@ -4,8 +4,7 @@ namespace Backend.Features.Vehicles;
 
 public class CreateVehicleDto
 {
-    [Required]
-    public required Guid UserId { get; set; }
+    public Guid? UserId { get; set; }
 
     [Required]
     [MinLength(1)]
