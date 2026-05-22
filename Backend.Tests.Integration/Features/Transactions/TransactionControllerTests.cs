@@ -209,4 +209,72 @@ public class TransactionControllerTests(CustomWebApplicationFactory factory) : I
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
+
+    [Fact]
+    public async Task GetMyTransactions_WhenAuthenticated_ReturnsOk()
+    {
+        var customer = await SeedUserAsync(UserRole.Customer);
+        SetAuthHeader(customer);
+
+        var response = await _client.GetAsync("/api/transactions");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetMyTransactions_WhenNotAuthenticated_ReturnsUnauthorized()
+    {
+        _client.DefaultRequestHeaders.Authorization = null;
+
+        var response = await _client.GetAsync("/api/transactions");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetMyTransactions_WhenNoTransactions_ReturnsEmptyList()
+    {
+        var customer = await SeedUserAsync(UserRole.Customer);
+        SetAuthHeader(customer);
+
+        var response = await _client.GetAsync("/api/transactions");
+        var transactions = await response.Content.ReadFromJsonAsync<List<TransactionDto>>(CustomWebApplicationFactory.JsonOptions);
+
+        Assert.NotNull(transactions);
+        Assert.Empty(transactions);
+    }
+
+    [Fact]
+    public async Task GetMyTransactions_AfterCreating_ReturnsOwnTransactions()
+    {
+        var customer = await SeedUserAsync(UserRole.Customer);
+        SetAuthHeader(customer);
+
+        var dto = new CreateTransactionRequestDto { Description = "Depósito", Amount = 100 };
+        await _client.PostAsync("/api/transactions", JsonContent.Create(dto, options: CustomWebApplicationFactory.JsonOptions));
+
+        var response = await _client.GetAsync("/api/transactions");
+        var transactions = await response.Content.ReadFromJsonAsync<List<TransactionDto>>(CustomWebApplicationFactory.JsonOptions);
+
+        Assert.NotNull(transactions);
+        Assert.Single(transactions);
+        Assert.Equal(100, transactions[0].Amount);
+    }
+
+    [Fact]
+    public async Task GetMyTransactions_ReturnsOnlyOwnTransactions()
+    {
+        var customer1 = await SeedUserAsync(UserRole.Customer);
+        var customer2 = await SeedUserAsync(UserRole.Customer);
+
+        SetAuthHeader(customer1);
+        var dto = new CreateTransactionRequestDto { Description = "Depósito", Amount = 50 };
+        await _client.PostAsync("/api/transactions", JsonContent.Create(dto, options: CustomWebApplicationFactory.JsonOptions));
+
+        SetAuthHeader(customer2);
+        var response = await _client.GetAsync("/api/transactions");
+        var transactions = await response.Content.ReadFromJsonAsync<List<TransactionDto>>(CustomWebApplicationFactory.JsonOptions);
+
+        Assert.Empty(transactions!);
+    }
 }

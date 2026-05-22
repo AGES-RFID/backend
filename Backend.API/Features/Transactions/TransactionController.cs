@@ -4,6 +4,7 @@ using Backend.Features.Transactions;
 using Backend.Features.Users;
 using Microsoft.AspNetCore.Mvc;
 
+
 namespace Backend.Features.Transactions;
 
 [ApiController]
@@ -55,21 +56,15 @@ public class TransactionsController(ITransactionService transactionService) : Co
         }
     }
 
-    [HttpGet("me")]
-    public async Task<ActionResult<TransactionDto>> GetMyTransactions()
+    [HttpGet]
+    public async Task<ActionResult<List<TransactionDto>>> GetMyTransactions()
     {
-        var sub = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+
+        var sub = User.FindFirstValue(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub);
         if (!Guid.TryParse(sub, out var userId))
             return Unauthorized();
 
-        try
-        {
-            var transaction = await _transactionService.GetMyTransactionAsync(userId);
-            return Ok(transaction);
-        }
-        catch (KeyNotFoundException)
-        {
-            return NotFound();
-        }
+        var transactions = await _transactionService.GetMyTransactionAsync(userId);
+        return Ok(transactions ?? new List<TransactionDto>());
     }
 }

@@ -8,7 +8,7 @@ namespace Backend.Features.Transactions;
 public interface ITransactionService
 {
     Task<TransactionDto> CreateTransactionAsync(CreateTransactionCommand command);
-    Task<TransactionDto> GetMyTransactionAsync(Guid userId);
+    Task<List<TransactionDto>> GetMyTransactionAsync(Guid userId);
 }
 
 public class TransactionService(AppDbContext db, IUserService userService) : ITransactionService
@@ -39,15 +39,17 @@ public class TransactionService(AppDbContext db, IUserService userService) : ITr
         return TransactionDto.FromModel(transaction.Entity);
     }
 
-    public async Task<TransactionDto> GetMyTransactionAsync(Guid UserId)
+    public async Task<List<TransactionDto>> GetMyTransactionAsync(Guid userId)
     {
-        var transaction = await _db.Transactions
+        var transactions = await _db.Transactions
+            .Where(t => t.UserId == userId)
             .Include(t => t.Access)
-            .FirstOrDefaultAsync(t => t.UserId == UserId);
+            .OrderByDescending(t => t.CreatedAt)
+            .ToListAsync();
 
-        if (transaction == null)
-            throw new KeyNotFoundException("Transações do usuário não encontradas");
+        if (transactions == null || transactions.Count == 0)
+            return new List<TransactionDto>();
 
-        return TransactionDto.FromModel(transaction);
+        return transactions.Select(TransactionDto.FromModel).ToList();
     }
 }
