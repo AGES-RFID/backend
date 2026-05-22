@@ -14,6 +14,15 @@ public class TransactionConfiguration : IEntityTypeConfiguration<Transaction>
         builder.Property(t => t.UserId)
             .IsRequired();
 
+        builder.Property(t => t.AccessId)
+            .IsRequired(false);
+
+        builder.HasOne(t => t.Access)
+            .WithMany()
+            .HasForeignKey(t => t.AccessId)
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.SetNull);
+
         builder.Property(t => t.Description)
             .IsRequired();
 

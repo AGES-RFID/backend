@@ -5,7 +5,7 @@ using Backend.Features.Users;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
-namespace Backend.Tests.Integration.Features.Auth;
+namespace Backend.Tests.Unit.Features.Auth;
 
 public class AuthServiceTests
 {
@@ -25,6 +25,7 @@ public class AuthServiceTests
             SecretKey = "supersecretkeyshouldbeverylong1234567890",
             Issuer = "TestIssuer",
             Audience = "TestAudience",
+            ExpiryMinutes = 60
         }));
     }
 

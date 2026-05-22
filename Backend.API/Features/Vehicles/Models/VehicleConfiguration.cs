@@ -22,6 +22,7 @@ public class VehicleConfiguration : IEntityTypeConfiguration<Vehicle>
         builder.HasOne(v => v.Tag)
             .WithOne(t => t.Vehicle)
             .HasForeignKey<Vehicle>(v => v.TagId)
+            .HasPrincipalKey<Tag>(t => t.TagId)
             .IsRequired(false);
 
         builder.Property(v => v.TagId)

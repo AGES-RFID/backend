@@ -10,9 +10,9 @@ public class AccessesControllerTests
     [Fact]
     public async Task RegisterEntry_WhenSuccess_ReturnsCreated()
     {
-
-        var dto = new CreateAccessDto { TagId = "TAG-001" };
-        var expected = new AccessDto { AccessId = Guid.NewGuid(), TagId = "TAG-001", Type = AccessType.Entry, Timestamp = DateTime.UtcNow };
+        var tagId = Guid.NewGuid();
+        var dto = new CreateAccessDto { TagId = tagId };
+        var expected = new AccessDto { AccessId = Guid.NewGuid(), TagId = tagId, Type = AccessType.Entry, Timestamp = DateTime.UtcNow };
 
         var service = Substitute.For<IAccessesService>();
         service.RegisterEntryAsync(dto).Returns(expected);
@@ -31,8 +31,7 @@ public class AccessesControllerTests
     [Fact]
     public async Task RegisterEntry_WhenTagNotFound_ReturnsNotFound()
     {
-
-        var dto = new CreateAccessDto { TagId = "TAG-404" };
+        var dto = new CreateAccessDto { TagId = Guid.NewGuid() };
         var service = Substitute.For<IAccessesService>();
         service.RegisterEntryAsync(dto).ThrowsAsync(new KeyNotFoundException("Tag not found"));
 
@@ -48,8 +47,7 @@ public class AccessesControllerTests
     [Fact]
     public async Task RegisterEntry_WhenTagInactive_ReturnsConflict()
     {
-
-        var dto = new CreateAccessDto { TagId = "TAG-003" };
+        var dto = new CreateAccessDto { TagId = Guid.NewGuid() };
         var service = Substitute.For<IAccessesService>();
         service.RegisterEntryAsync(dto).ThrowsAsync(new InvalidOperationException("Tag inactive"));
 
@@ -65,8 +63,7 @@ public class AccessesControllerTests
     [Fact]
     public async Task RegisterExit_WhenAlreadyOutside_ReturnsConflict()
     {
-
-        var dto = new CreateAccessDto { TagId = "TAG-002" };
+        var dto = new CreateAccessDto { TagId = Guid.NewGuid() };
         var service = Substitute.For<IAccessesService>();
         service.RegisterExitAsync(dto).ThrowsAsync(new InvalidOperationException("Already outside"));
 

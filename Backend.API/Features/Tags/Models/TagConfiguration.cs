@@ -27,6 +27,6 @@ public class TagConfiguration : IEntityTypeConfiguration<Tag>
             .IsRequired()
             .HasDefaultValueSql("now()");
 
-        builder.ToTable("Tags");
+        builder.ToTable("tags");
     }
 }

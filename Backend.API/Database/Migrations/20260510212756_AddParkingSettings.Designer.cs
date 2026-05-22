@@ -6,6 +6,7 @@ using Backend.Features.Transactions;
 using Backend.Features.Users;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -14,9 +15,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Backend.Database.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260510212756_AddParkingSettings")]
+    partial class AddParkingSettings
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -41,8 +44,9 @@ namespace Backend.Database.Migrations
                         .HasColumnName("created_at")
                         .HasDefaultValueSql("now()");
 
-                    b.Property<Guid>("TagId")
-                        .HasColumnType("uuid")
+                    b.Property<string>("TagId")
+                        .IsRequired()
+                        .HasColumnType("text")
                         .HasColumnName("tag_id");
 
                     b.Property<DateTime>("Timestamp")
@@ -70,12 +74,12 @@ namespace Backend.Database.Migrations
                     b.ToTable("accesses", (string)null);
                 });
 
-            modelBuilder.Entity("Backend.Features.ParkingPrices.ParkingPrice", b =>
+            modelBuilder.Entity("Backend.Features.ParkingSettings.ParkingSettings", b =>
                 {
-                    b.Property<Guid>("ParkingPriceId")
+                    b.Property<Guid>("ParkingSettingsId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
-                        .HasColumnName("parking_price_id");
+                        .HasColumnName("parking_settings_id");
 
                     b.Property<decimal>("BasePrice")
                         .ValueGeneratedOnAdd()
@@ -95,12 +99,6 @@ namespace Backend.Database.Migrations
                         .HasDefaultValue(5.00m)
                         .HasColumnName("hourly_rate");
 
-                    b.Property<int>("ThresholdMinutes")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(180)
-                        .HasColumnName("threshold_minutes");
-
                     b.Property<int>("ToleranceMinutes")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
@@ -113,17 +111,16 @@ namespace Backend.Database.Migrations
                         .HasColumnName("updated_at")
                         .HasDefaultValueSql("now()");
 
-                    b.HasKey("ParkingPriceId")
-                        .HasName("pk_parking_prices");
+                    b.HasKey("ParkingSettingsId")
+                        .HasName("pk_parking_settings");
 
-                    b.ToTable("parking_prices", (string)null);
+                    b.ToTable("parking_settings", (string)null);
                 });
 
             modelBuilder.Entity("Backend.Features.Tags.Tag", b =>
                 {
-                    b.Property<Guid>("TagId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                    b.Property<string>("TagId")
+                        .HasColumnType("text")
                         .HasColumnName("tag_id");
 
                     b.Property<DateTime>("CreatedAt")
@@ -132,21 +129,11 @@ namespace Backend.Database.Migrations
                         .HasColumnName("created_at")
                         .HasDefaultValueSql("now()");
 
-                    b.Property<string>("Epc")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("epc");
-
                     b.Property<int>("Status")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
                         .HasDefaultValue(0)
                         .HasColumnName("status");
-
-                    b.Property<string>("Tid")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("tid");
 
                     b.Property<DateTime>("UpdatedAt")
                         .ValueGeneratedOnAdd()
@@ -157,7 +144,7 @@ namespace Backend.Database.Migrations
                     b.HasKey("TagId")
                         .HasName("pk_tags");
 
-                    b.ToTable("tags", (string)null);
+                    b.ToTable("Tags", (string)null);
                 });
 
             modelBuilder.Entity("Backend.Features.Transactions.Transaction", b =>
@@ -166,10 +153,6 @@ namespace Backend.Database.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("transaction_id");
-
-                    b.Property<Guid?>("AccessId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("access_id");
 
                     b.Property<decimal>("Amount")
                         .HasColumnType("decimal(18,2)")
@@ -200,9 +183,6 @@ namespace Backend.Database.Migrations
 
                     b.HasKey("TransactionId")
                         .HasName("pk_transactions");
-
-                    b.HasIndex("AccessId")
-                        .HasDatabaseName("ix_transactions_access_id");
 
                     b.ToTable("transactions", (string)null);
                 });
@@ -283,8 +263,8 @@ namespace Backend.Database.Migrations
                         .HasColumnType("text")
                         .HasColumnName("plate");
 
-                    b.Property<Guid?>("TagId")
-                        .HasColumnType("uuid")
+                    b.Property<string>("TagId")
+                        .HasColumnType("text")
                         .HasColumnName("tag_id");
 
                     b.Property<DateTime>("UpdatedAt")
@@ -324,17 +304,6 @@ namespace Backend.Database.Migrations
                         .HasConstraintName("fk_accesses_tags_tag_id");
 
                     b.Navigation("Tag");
-                });
-
-            modelBuilder.Entity("Backend.Features.Transactions.Transaction", b =>
-                {
-                    b.HasOne("Backend.Features.Accesses.Access", "Access")
-                        .WithMany()
-                        .HasForeignKey("AccessId")
-                        .OnDelete(DeleteBehavior.SetNull)
-                        .HasConstraintName("fk_transactions_accesses_access_id");
-
-                    b.Navigation("Access");
                 });
 
             modelBuilder.Entity("Backend.Features.Vehicles.Vehicle", b =>

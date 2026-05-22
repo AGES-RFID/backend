@@ -15,6 +15,7 @@ using Backend.Features.Vehicles;
 using Backend.Features.Dashboard;
 using Backend.Features.Transactions;
 using Backend.Features.Accesses;
+using Backend.Features.ParkingPrices;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -100,6 +101,7 @@ builder.Services.AddScoped<ITagService, TagService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IAccessesService, AccessesService>();
+builder.Services.AddScoped<IParkingPricesService, ParkingPricesService>();
 
 // Configure JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>()
@@ -133,10 +135,14 @@ builder.Services.AddAuthorization();
 var app = builder.Build();
 
 // Apply pending migrations
-using (var scope = app.Services.CreateScope())
+var skipMigrations = string.Equals(Environment.GetEnvironmentVariable("SKIP_MIGRATIONS"), "true", StringComparison.OrdinalIgnoreCase);
+if (!app.Environment.IsEnvironment("Testing") && !skipMigrations)
 {
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.Migrate();
+    using (var scope = app.Services.CreateScope())
+    {
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        db.Database.Migrate();
+    }
 }
 
 // Configure the HTTP request pipeline

@@ -36,7 +36,7 @@ public class DashboardControllerTests(CustomWebApplicationFactory factory)
         };
         db.Users.Add(user);
 
-        var tag = new Tag { TagId = $"TAG-{Guid.NewGuid()}", Status = TagStatus.IN_USE };
+        var tag = new Tag { Status = TagStatus.IN_USE, Epc = $"EPC-{Guid.NewGuid()}", Tid = $"TID-{Guid.NewGuid()}" };
         db.Tags.Add(tag);
 
         await db.SaveChangesAsync();
@@ -55,7 +55,7 @@ public class DashboardControllerTests(CustomWebApplicationFactory factory)
         return (user, vehicle, tag);
     }
 
-    private async Task SeedAccessAsync(string tagId, AccessType type, DateTime timestamp)
+    private async Task SeedAccessAsync(Guid tagId, AccessType type, DateTime timestamp)
     {
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
