@@ -8,6 +8,7 @@ namespace Backend.Features.Transactions;
 public interface ITransactionService
 {
     Task<TransactionDto> CreateTransactionAsync(CreateTransactionCommand command);
+    Task<TransactionDto> GetMyTransactionAsync(Guid userId);
 }
 
 public class TransactionService(AppDbContext db, IUserService userService) : ITransactionService
@@ -36,5 +37,17 @@ public class TransactionService(AppDbContext db, IUserService userService) : ITr
         await _db.SaveChangesAsync();
 
         return TransactionDto.FromModel(transaction.Entity);
+    }
+
+    public async Task<TransactionDto> GetMyTransactionAsync(Guid UserId)
+    {
+        var transaction = await _db.Transactions
+            .Include(t => t.Access)
+            .FirstOrDefaultAsync(t => t.UserId == UserId);
+
+        if (transaction == null)
+            throw new KeyNotFoundException("Transações do usuário não encontradas");
+
+        return TransactionDto.FromModel(transaction);
     }
 }

@@ -54,4 +54,22 @@ public class TransactionsController(ITransactionService transactionService) : Co
             return BadRequest(new { error = ex.Message });
         }
     }
+
+    [HttpGet("me")]
+    public async Task<ActionResult<TransactionDto>> GetMyTransactions()
+    {
+        var sub = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+        if (!Guid.TryParse(sub, out var userId))
+            return Unauthorized();
+
+        try
+        {
+            var transaction = await _transactionService.GetMyTransactionAsync(userId);
+            return Ok(transaction);
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+    }
 }
