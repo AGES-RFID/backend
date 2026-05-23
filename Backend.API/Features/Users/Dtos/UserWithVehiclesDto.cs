@@ -15,6 +15,8 @@ public class UserWithVehiclesDto : UserDto
         CreatedAt = user.CreatedAt,
         UpdatedAt = user.UpdatedAt,
         Balance = balance,
+        Cpf = user.Cpf,
+        Cellphone = user.Cellphone,
         Vehicles = [.. user.Vehicles.Select(VehicleDto.FromModel)]
     };
 }

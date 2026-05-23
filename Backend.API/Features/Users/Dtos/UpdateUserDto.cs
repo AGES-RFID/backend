@@ -10,4 +10,6 @@ public class UpdateUserDto
     [MinLength(8)]
     public string? Password { get; set; }
     public UserRole? Role { get; set; }
+    public string? Cpf { get; set; }
+    public string? Cellphone { get; set; }
 }

@@ -8,6 +8,8 @@ public class User
     public required string Email { get; set; }
     public required string PasswordHash { get; set; }
     public required UserRole Role { get; set; }
+    public string? Cpf { get; set; }
+    public string? Cellphone { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 
