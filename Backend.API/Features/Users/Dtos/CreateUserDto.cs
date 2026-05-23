@@ -15,4 +15,6 @@ public class CreateUserDto
     public required string Password { get; set; }
     [Required]
     public required UserRole Role { get; set; }
+    public string? Cpf { get; set; }
+    public string? Cellphone { get; set; }
 }

@@ -11,6 +11,8 @@ public class UserDto
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public decimal Balance { get; set; }
+    public string? Cpf { get; set; }
+    public string? Cellphone { get; set; }
 
     public static UserDto FromModel(User user, decimal balance = 0m) => new()
     {
@@ -21,6 +23,8 @@ public class UserDto
         CreatedAt = user.CreatedAt,
         UpdatedAt = user.UpdatedAt,
         Balance = balance,
+        Cpf = user.Cpf,
+        Cellphone = user.Cellphone,
     };
 
 }

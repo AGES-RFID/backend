@@ -100,7 +100,9 @@ public class UserService(AppDbContext db) : IUserService
             Name = dto.Name,
             Email = dto.Email,
             PasswordHash = passwordHash,
-            Role = dto.Role
+            Role = dto.Role,
+            Cpf = dto.Cpf,
+            Cellphone = dto.Cellphone
         });
 
         await _db.SaveChangesAsync();
@@ -121,6 +123,8 @@ public class UserService(AppDbContext db) : IUserService
         user.Name = dto.Name ?? user.Name;
         user.Email = dto.Email ?? user.Email;
         user.Role = dto.Role ?? user.Role;
+        user.Cpf = dto.Cpf ?? user.Cpf;
+        user.Cellphone = dto.Cellphone ?? user.Cellphone;
         if (!string.IsNullOrEmpty(dto.Password))
         {
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password);
