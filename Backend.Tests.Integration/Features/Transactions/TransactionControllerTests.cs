@@ -81,7 +81,7 @@ public class TransactionControllerTests(CustomWebApplicationFactory factory) : I
         var customer = await SeedUserAsync(UserRole.Customer);
         SetAuthHeader(admin);
 
-        var payload = new CreateTransactionRequestDto
+        var payload = new CreateTransactionDto
         {
             UserId = customer.UserId,
             Description = "Admin deposit",
@@ -104,7 +104,7 @@ public class TransactionControllerTests(CustomWebApplicationFactory factory) : I
         var customer = await SeedUserAsync(UserRole.Customer);
         SetAuthHeader(customer);
 
-        var payload = new CreateTransactionRequestDto
+        var payload = new CreateTransactionDto
         {
             Description = "Self deposit",
             Amount = 25m
@@ -126,7 +126,7 @@ public class TransactionControllerTests(CustomWebApplicationFactory factory) : I
         var otherCustomer = await SeedUserAsync(UserRole.Customer);
         SetAuthHeader(customer);
 
-        var payload = new CreateTransactionRequestDto
+        var payload = new CreateTransactionDto
         {
             UserId = otherCustomer.UserId,
             Description = "Invalid deposit",
@@ -144,7 +144,7 @@ public class TransactionControllerTests(CustomWebApplicationFactory factory) : I
         var admin = await SeedUserAsync(UserRole.Admin);
         SetAuthHeader(admin);
 
-        var payload = new CreateTransactionRequestDto
+        var payload = new CreateTransactionDto
         {
             Description = "Admin self deposit",
             Amount = 50m
@@ -164,7 +164,7 @@ public class TransactionControllerTests(CustomWebApplicationFactory factory) : I
     {
         _client.DefaultRequestHeaders.Authorization = null;
 
-        var payload = new CreateTransactionRequestDto
+        var payload = new CreateTransactionDto
         {
             Description = "No auth",
             Amount = 15m
@@ -181,7 +181,7 @@ public class TransactionControllerTests(CustomWebApplicationFactory factory) : I
         var admin = await SeedUserAsync(UserRole.Admin);
         SetAuthHeader(admin);
 
-        var payload = new CreateTransactionRequestDto
+        var payload = new CreateTransactionDto
         {
             UserId = Guid.NewGuid(),
             Description = "Missing user",
@@ -199,7 +199,7 @@ public class TransactionControllerTests(CustomWebApplicationFactory factory) : I
         var admin = await SeedUserAsync(UserRole.Admin);
         SetAuthHeader(admin);
 
-        var payload = new CreateTransactionRequestDto
+        var payload = new CreateTransactionDto
         {
             Description = "",
             Amount = 0m

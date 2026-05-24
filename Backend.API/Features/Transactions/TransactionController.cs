@@ -1,7 +1,4 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using Backend.Features.Transactions;
-using Backend.Features.Users;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 
@@ -9,7 +6,7 @@ namespace Backend.Features.Transactions;
 
 [ApiController]
 [Route("api/transactions")]
-
+[Authorize]
 public class TransactionsController(ITransactionService transactionService) : ControllerBase
 {
     private readonly ITransactionService _transactionService = transactionService;
@@ -21,25 +18,11 @@ public class TransactionsController(ITransactionService transactionService) : Co
     }
 
     [HttpPost]
-    public async Task<ActionResult<TransactionDto>> CreateTransaction(CreateTransactionRequestDto dto)
+    public async Task<ActionResult<TransactionDto>> CreateTransaction(CreateTransactionDto dto)
     {
-        var sub = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
-        if (!Guid.TryParse(sub, out var actorUserId))
-            return Unauthorized();
-
-        var targetUserId = dto.UserId ?? actorUserId;
-
-        var command = new CreateTransactionCommand
-        {
-            ActorUserId = actorUserId,
-            TargetUserId = targetUserId,
-            Description = dto.Description,
-            Amount = dto.Amount
-        };
-
         try
         {
-            var transaction = await _transactionService.CreateTransactionAsync(command);
+            var transaction = await _transactionService.CreateTransactionAsync(dto);
             return CreatedAtAction(nameof(GetTransaction), new { id = transaction.TransactionId }, transaction);
         }
         catch (UnauthorizedAccessException)

@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Backend.Features.Transactions;
 
-public class CreateTransactionRequestDto
+public class CreateTransactionDto
 {
     public Guid? UserId { get; set; }
     public Guid? AccessId { get; set; }

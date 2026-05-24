@@ -1,36 +1,39 @@
 using Backend.Database;
+using Backend.Features.Auth;
 using Backend.Features.Users;
-using Backend.Features.Transactions;
-using Microsoft.EntityFrameworkCore;
 
 namespace Backend.Features.Transactions;
 
 public interface ITransactionService
 {
-    Task<TransactionDto> CreateTransactionAsync(CreateTransactionCommand command);
+    Task<TransactionDto> CreateTransactionAsync(CreateTransactionDto dto);
     Task<List<TransactionDto>> GetMyTransactionAsync(Guid userId);
 }
 
-public class TransactionService(AppDbContext db, IUserService userService) : ITransactionService
+public class TransactionService(AppDbContext db, IUserService userService, ICurrentUserContext currentUserContext) : ITransactionService
 {
     private readonly AppDbContext _db = db;
     private readonly IUserService _userService = userService;
+    private readonly ICurrentUserContext _currentUserContext = currentUserContext;
 
-    public async Task<TransactionDto> CreateTransactionAsync(CreateTransactionCommand command)
+    public async Task<TransactionDto> CreateTransactionAsync(CreateTransactionDto dto)
     {
-        var actor = await _userService.GetUserAsync(command.ActorUserId);
+        var actorUserId = _currentUserContext.GetRequiredUserId();
+        var actorRole = _currentUserContext.GetRequiredRole();
 
-        if (actor.Role != UserRole.Admin && command.ActorUserId != command.TargetUserId)
+        var targetUserId = dto.UserId ?? actorUserId;
+
+        if (actorRole != UserRole.Admin && actorUserId != targetUserId)
             throw new UnauthorizedAccessException("Usuário não autorizado");
 
-        var target = await _userService.GetUserAsync(command.TargetUserId)
+        var target = await _userService.GetUserAsync(targetUserId)
             ?? throw new InvalidOperationException("Usuário não encontrado");
 
         var transaction = await _db.Transactions.AddAsync(new Transaction
         {
             UserId = target.UserId,
-            Description = command.Description,
-            Amount = command.Amount,
+            Description = dto.Description,
+            Amount = dto.Amount,
             TransactionType = TransactionType.DEPOSIT,
         });
 

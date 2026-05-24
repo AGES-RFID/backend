@@ -1,4 +1,5 @@
 using Backend.Database;
+using Backend.Features.Auth;
 using Backend.Features.Transactions;
 using Backend.Features.Users;
 using Microsoft.EntityFrameworkCore;
@@ -31,23 +32,24 @@ public class TransactionServiceTests
     {
         var db = CreateInMemoryDb();
         var userService = Substitute.For<IUserService>();
-        var sut = new TransactionService(db, userService);
+        var currentUser = Substitute.For<ICurrentUserContext>();
+        var sut = new TransactionService(db, userService, currentUser);
 
         var actorUserId = Guid.NewGuid();
-        userService.GetUserAsync(actorUserId).Returns(CreateUserDto(actorUserId, UserRole.Customer));
         var targetUserId = Guid.NewGuid();
 
-        var command = new CreateTransactionCommand
+        currentUser.GetRequiredUserId().Returns(actorUserId);
+        currentUser.GetRequiredRole().Returns(UserRole.Customer);
+
+        var dto = new CreateTransactionDto
         {
-            ActorUserId = actorUserId,
-            TargetUserId = targetUserId,
+            UserId = targetUserId,
             Description = "Test",
             Amount = 10m
         };
 
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => sut.CreateTransactionAsync(command));
-        await userService.Received(1).GetUserAsync(actorUserId);
-        await userService.DidNotReceive().GetUserAsync(targetUserId);
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => sut.CreateTransactionAsync(dto));
+        await userService.DidNotReceive().GetUserAsync(Arg.Any<Guid>());
     }
 
     [Fact]
@@ -55,73 +57,100 @@ public class TransactionServiceTests
     {
         var db = CreateInMemoryDb();
         var userService = Substitute.For<IUserService>();
-        var sut = new TransactionService(db, userService);
+        var currentUser = Substitute.For<ICurrentUserContext>();
+        var sut = new TransactionService(db, userService, currentUser);
 
         var actorUserId = Guid.NewGuid();
-        userService.GetUserAsync(actorUserId).Returns(CreateUserDto(actorUserId, UserRole.Admin));
         var targetUserId = Guid.NewGuid();
+
+        currentUser.GetRequiredUserId().Returns(actorUserId);
+        currentUser.GetRequiredRole().Returns(UserRole.Admin);
         userService.GetUserAsync(targetUserId).Returns(CreateUserDto(targetUserId, UserRole.Customer));
 
-        var command = new CreateTransactionCommand
+        var dto = new CreateTransactionDto
         {
-            ActorUserId = actorUserId,
-            TargetUserId = targetUserId,
+            UserId = targetUserId,
             Description = "Deposit",
             Amount = 30m
         };
 
-        var result = await sut.CreateTransactionAsync(command);
+        var result = await sut.CreateTransactionAsync(dto);
 
         Assert.Equal(targetUserId, result.UserId);
-        Assert.Equal(command.Amount, result.Amount);
+        Assert.Equal(dto.Amount, result.Amount);
         Assert.Single(db.Transactions);
     }
 
     [Fact]
-    public async Task CreateTransactionAsync_WhenActorNotFound_ThrowsInvalidOperationException()
+    public async Task CreateTransactionAsync_WhenCurrentUserIsMissing_ThrowsUnauthorizedAccessException()
     {
         var db = CreateInMemoryDb();
         var userService = Substitute.For<IUserService>();
-        var sut = new TransactionService(db, userService);
+        var currentUser = Substitute.For<ICurrentUserContext>();
+        var sut = new TransactionService(db, userService, currentUser);
 
-        var actorUserId = Guid.NewGuid();
-        userService.GetUserAsync(actorUserId).ThrowsAsync<KeyNotFoundException>();
+        currentUser.GetRequiredUserId().Throws(new UnauthorizedAccessException());
 
-        var command = new CreateTransactionCommand
+        var dto = new CreateTransactionDto
         {
-            ActorUserId = actorUserId,
-            TargetUserId = Guid.NewGuid(),
             Description = "Deposit",
             Amount = 15m
         };
 
-        await Assert.ThrowsAnyAsync<Exception>(() => sut.CreateTransactionAsync(command));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => sut.CreateTransactionAsync(dto));
     }
 
     [Fact]
-    public async Task CreateTransactionAsync_WhenValid_PersistsTransactionFields()
+    public async Task CreateTransactionAsync_WhenTargetUserNotFound_ThrowsKeyNotFoundException()
     {
         var db = CreateInMemoryDb();
         var userService = Substitute.For<IUserService>();
-        var sut = new TransactionService(db, userService);
+        var currentUser = Substitute.For<ICurrentUserContext>();
+        var sut = new TransactionService(db, userService, currentUser);
 
+        var actorUserId = Guid.NewGuid();
         var targetUserId = Guid.NewGuid();
-        userService.GetUserAsync(targetUserId).Returns(CreateUserDto(targetUserId, UserRole.Customer));
 
-        var command = new CreateTransactionCommand
+        currentUser.GetRequiredUserId().Returns(actorUserId);
+        currentUser.GetRequiredRole().Returns(UserRole.Admin);
+        userService.GetUserAsync(targetUserId).ThrowsAsync<KeyNotFoundException>();
+
+        var dto = new CreateTransactionDto
         {
-            ActorUserId = targetUserId,
-            TargetUserId = targetUserId,
+            UserId = targetUserId,
+            Description = "Deposit",
+            Amount = 15m
+        };
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => sut.CreateTransactionAsync(dto));
+    }
+
+    [Fact]
+    public async Task CreateTransactionAsync_WhenTargetUserOmitted_DefaultsToCurrentUserAndPersistsTransaction()
+    {
+        var db = CreateInMemoryDb();
+        var userService = Substitute.For<IUserService>();
+        var currentUser = Substitute.For<ICurrentUserContext>();
+        var sut = new TransactionService(db, userService, currentUser);
+
+        var actorUserId = Guid.NewGuid();
+
+        currentUser.GetRequiredUserId().Returns(actorUserId);
+        currentUser.GetRequiredRole().Returns(UserRole.Customer);
+        userService.GetUserAsync(actorUserId).Returns(CreateUserDto(actorUserId, UserRole.Customer));
+
+        var dto = new CreateTransactionDto
+        {
             Description = "Deposit",
             Amount = 99m
         };
 
-        await sut.CreateTransactionAsync(command);
+        await sut.CreateTransactionAsync(dto);
 
         var transaction = await db.Transactions.SingleAsync();
-        Assert.Equal(targetUserId, transaction.UserId);
-        Assert.Equal(command.Description, transaction.Description);
-        Assert.Equal(command.Amount, transaction.Amount);
+        Assert.Equal(actorUserId, transaction.UserId);
+        Assert.Equal(dto.Description, transaction.Description);
+        Assert.Equal(dto.Amount, transaction.Amount);
         Assert.Equal(TransactionType.DEPOSIT, transaction.TransactionType);
     }
 
