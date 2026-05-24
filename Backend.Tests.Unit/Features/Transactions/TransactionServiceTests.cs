@@ -159,9 +159,11 @@ public class TransactionServiceTests
     {
         var db = CreateInMemoryDb();
         var userService = Substitute.For<IUserService>();
-        var sut = new TransactionService(db, userService);
+        var currentUser = Substitute.For<ICurrentUserContext>();
+        currentUser.GetRequiredUserId().Returns(Guid.NewGuid());
+        var sut = new TransactionService(db, userService, currentUser);
 
-        var result = await sut.GetMyTransactionAsync(Guid.NewGuid());
+        var result = await sut.GetMyTransactionAsync();
 
         Assert.Empty(result);
     }
@@ -179,9 +181,11 @@ public class TransactionServiceTests
         await db.SaveChangesAsync();
 
         var userService = Substitute.For<IUserService>();
-        var sut = new TransactionService(db, userService);
+        var currentUser = Substitute.For<ICurrentUserContext>();
+        currentUser.GetRequiredUserId().Returns(userId);
+        var sut = new TransactionService(db, userService, currentUser);
 
-        var result = await sut.GetMyTransactionAsync(userId);
+        var result = await sut.GetMyTransactionAsync();
 
         Assert.Equal(2, result.Count);
         Assert.All(result, t => Assert.Equal(userId, t.UserId));
@@ -199,9 +203,11 @@ public class TransactionServiceTests
         await db.SaveChangesAsync();
 
         var userService = Substitute.For<IUserService>();
-        var sut = new TransactionService(db, userService);
+        var currentUser = Substitute.For<ICurrentUserContext>();
+        currentUser.GetRequiredUserId().Returns(userId);
+        var sut = new TransactionService(db, userService, currentUser);
 
-        var result = await sut.GetMyTransactionAsync(userId);
+        var result = await sut.GetMyTransactionAsync();
 
         Assert.Equal("New", result[0].Description);
         Assert.Equal("Old", result[1].Description);

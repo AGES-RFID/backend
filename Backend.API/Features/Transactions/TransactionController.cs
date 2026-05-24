@@ -42,12 +42,7 @@ public class TransactionsController(ITransactionService transactionService) : Co
     [HttpGet]
     public async Task<ActionResult<List<TransactionDto>>> GetMyTransactions()
     {
-
-        var sub = User.FindFirstValue(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub);
-        if (!Guid.TryParse(sub, out var userId))
-            return Unauthorized();
-
-        var transactions = await _transactionService.GetMyTransactionAsync(userId);
+        var transactions = await _transactionService.GetMyTransactionAsync();
         return Ok(transactions ?? new List<TransactionDto>());
     }
 }

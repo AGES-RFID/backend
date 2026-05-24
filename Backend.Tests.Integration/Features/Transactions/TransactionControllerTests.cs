@@ -250,7 +250,7 @@ public class TransactionControllerTests(CustomWebApplicationFactory factory) : I
         var customer = await SeedUserAsync(UserRole.Customer);
         SetAuthHeader(customer);
 
-        var dto = new CreateTransactionRequestDto { Description = "Depósito", Amount = 100 };
+        var dto = new CreateTransactionDto { Description = "Depósito", Amount = 100 };
         await _client.PostAsync("/api/transactions", JsonContent.Create(dto, options: CustomWebApplicationFactory.JsonOptions));
 
         var response = await _client.GetAsync("/api/transactions");
@@ -268,7 +268,7 @@ public class TransactionControllerTests(CustomWebApplicationFactory factory) : I
         var customer2 = await SeedUserAsync(UserRole.Customer);
 
         SetAuthHeader(customer1);
-        var dto = new CreateTransactionRequestDto { Description = "Depósito", Amount = 50 };
+        var dto = new CreateTransactionDto { Description = "Depósito", Amount = 50 };
         await _client.PostAsync("/api/transactions", JsonContent.Create(dto, options: CustomWebApplicationFactory.JsonOptions));
 
         SetAuthHeader(customer2);
