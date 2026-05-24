@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
+
 namespace Backend.Features.Transactions;
 
 [ApiController]
@@ -36,5 +37,12 @@ public class TransactionsController(ITransactionService transactionService) : Co
         {
             return BadRequest(new { error = ex.Message });
         }
+    }
+
+    [HttpGet]
+    public async Task<ActionResult<List<TransactionDto>>> GetMyTransactions()
+    {
+        var transactions = await _transactionService.GetMyTransactionAsync();
+        return Ok(transactions ?? new List<TransactionDto>());
     }
 }

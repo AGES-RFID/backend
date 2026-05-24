@@ -153,4 +153,63 @@ public class TransactionServiceTests
         Assert.Equal(dto.Amount, transaction.Amount);
         Assert.Equal(TransactionType.DEPOSIT, transaction.TransactionType);
     }
+
+    [Fact]
+    public async Task GetMyTransactionAsync_WhenNoTransactions_ReturnsEmptyList()
+    {
+        var db = CreateInMemoryDb();
+        var userService = Substitute.For<IUserService>();
+        var currentUser = Substitute.For<ICurrentUserContext>();
+        currentUser.GetRequiredUserId().Returns(Guid.NewGuid());
+        var sut = new TransactionService(db, userService, currentUser);
+
+        var result = await sut.GetMyTransactionAsync();
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetMyTransactionAsync_ReturnsOnlyUserTransactions()
+    {
+        var db = CreateInMemoryDb();
+        var userId = Guid.NewGuid();
+        var otherUserId = Guid.NewGuid();
+
+        db.Transactions.Add(new Transaction { UserId = userId, Amount = 10, Description = "T1", TransactionType = TransactionType.DEPOSIT });
+        db.Transactions.Add(new Transaction { UserId = userId, Amount = 20, Description = "T2", TransactionType = TransactionType.DEPOSIT });
+        db.Transactions.Add(new Transaction { UserId = otherUserId, Amount = 5, Description = "T3", TransactionType = TransactionType.DEPOSIT });
+        await db.SaveChangesAsync();
+
+        var userService = Substitute.For<IUserService>();
+        var currentUser = Substitute.For<ICurrentUserContext>();
+        currentUser.GetRequiredUserId().Returns(userId);
+        var sut = new TransactionService(db, userService, currentUser);
+
+        var result = await sut.GetMyTransactionAsync();
+
+        Assert.Equal(2, result.Count);
+        Assert.All(result, t => Assert.Equal(userId, t.UserId));
+    }
+
+    [Fact]
+    public async Task GetMyTransactionAsync_ReturnsOrderedByCreatedAtDescending()
+    {
+        var db = CreateInMemoryDb();
+        var userId = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+
+        db.Transactions.Add(new Transaction { UserId = userId, Amount = 10, Description = "Old", TransactionType = TransactionType.DEPOSIT, CreatedAt = now.AddHours(-2) });
+        db.Transactions.Add(new Transaction { UserId = userId, Amount = 20, Description = "New", TransactionType = TransactionType.DEPOSIT, CreatedAt = now });
+        await db.SaveChangesAsync();
+
+        var userService = Substitute.For<IUserService>();
+        var currentUser = Substitute.For<ICurrentUserContext>();
+        currentUser.GetRequiredUserId().Returns(userId);
+        var sut = new TransactionService(db, userService, currentUser);
+
+        var result = await sut.GetMyTransactionAsync();
+
+        Assert.Equal("New", result[0].Description);
+        Assert.Equal("Old", result[1].Description);
+    }
 }

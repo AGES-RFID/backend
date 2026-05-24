@@ -1,12 +1,14 @@
 using Backend.Database;
 using Backend.Features.Auth;
 using Backend.Features.Users;
+using Microsoft.EntityFrameworkCore;
 
 namespace Backend.Features.Transactions;
 
 public interface ITransactionService
 {
     Task<TransactionDto> CreateTransactionAsync(CreateTransactionDto dto);
+    Task<List<TransactionDto>> GetMyTransactionAsync();
 }
 
 public class TransactionService(AppDbContext db, IUserService userService, ICurrentUserContext currentUserContext) : ITransactionService
@@ -39,5 +41,21 @@ public class TransactionService(AppDbContext db, IUserService userService, ICurr
         await _db.SaveChangesAsync();
 
         return TransactionDto.FromModel(transaction.Entity);
+    }
+
+    public async Task<List<TransactionDto>> GetMyTransactionAsync()
+    {
+        var userId = _currentUserContext.GetRequiredUserId();
+
+        var transactions = await _db.Transactions
+            .Where(t => t.UserId == userId)
+            .Include(t => t.Access)
+            .OrderByDescending(t => t.CreatedAt)
+            .ToListAsync();
+
+        if (transactions == null || transactions.Count == 0)
+            return [];
+
+        return [.. transactions.Select(TransactionDto.FromModel)];
     }
 }
