@@ -24,7 +24,7 @@ public class AccessesControllerTests(CustomWebApplicationFactory factory) : ICla
 
     public Task DisposeAsync() => Task.CompletedTask;
 
-    private async Task<Guid> SeedVehicleAndTagAsync(TagStatus status = TagStatus.IN_USE)
+    private async Task<(Guid TagId, string Tid, string Epc)> SeedVehicleAndTagAsync(TagStatus status = TagStatus.IN_USE)
     {
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -32,13 +32,15 @@ public class AccessesControllerTests(CustomWebApplicationFactory factory) : ICla
         var user = new User { Name = "Test", Email = $"test_{Guid.NewGuid()}@example.com", PasswordHash = "hash", Role = UserRole.Customer };
         db.Users.Add(user);
 
-        var tag = new Tag { Status = status, Epc = $"EPC-{Guid.NewGuid()}", Tid = $"TID-{Guid.NewGuid()}" };
+        var tid = $"TID-{Guid.NewGuid()}";
+        var epc = $"EPC-{Guid.NewGuid()}";
+        var tag = new Tag { Status = status, Epc = epc, Tid = tid };
         db.Tags.Add(tag);
 
         db.Vehicles.Add(new Vehicle { UserId = user.UserId, TagId = tag.TagId, Plate = $"TST{Guid.NewGuid().ToString()[..4].ToUpper()}", Brand = "VW", Model = "Gol" });
 
         await db.SaveChangesAsync();
-        return tag.TagId;
+        return (tag.TagId, tid, epc);
     }
 
     private async Task SeedAccessAsync(Guid tagId, AccessType type)
@@ -60,50 +62,42 @@ public class AccessesControllerTests(CustomWebApplicationFactory factory) : ICla
     }
 
     [Fact]
-    public async Task PostEntry_WithValidTag_ReturnsCreated()
+    public async Task PostAccess_Entry_WithValidTag_ReturnsCreated()
     {
-        var tagId = await SeedVehicleAndTagAsync();
-        var payload = new CreateAccessDto { TagId = tagId };
+        var (_, tid, epc) = await SeedVehicleAndTagAsync();
+        var payload = new CreateAccessDto { Tid = tid, Epc = epc, Entrance = true };
 
-
-        var response = await _client.PostAsync("/api/accesses/entry", JsonContent.Create(payload, options: CustomWebApplicationFactory.JsonOptions));
-
+        var response = await _client.PostAsync("/api/accesses", JsonContent.Create(payload, options: CustomWebApplicationFactory.JsonOptions));
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var result = await response.Content.ReadFromJsonAsync<AccessDto>(CustomWebApplicationFactory.JsonOptions);
         Assert.NotNull(result);
-        Assert.Equal(tagId, result.TagId);
         Assert.Equal(AccessType.Entry, result.Type);
     }
 
     [Fact]
-    public async Task PostEntry_WhenAlreadyInside_ReturnsConflict()
+    public async Task PostAccess_Entry_WhenAlreadyInside_ReturnsConflict()
     {
-        var tagId = await SeedVehicleAndTagAsync();
-        var payload = new CreateAccessDto { TagId = tagId };
+        var (_, tid, epc) = await SeedVehicleAndTagAsync();
+        var payload = new CreateAccessDto { Tid = tid, Epc = epc, Entrance = true };
 
+        await _client.PostAsync("/api/accesses", JsonContent.Create(payload, options: CustomWebApplicationFactory.JsonOptions));
 
-        await _client.PostAsync("/api/accesses/entry", JsonContent.Create(payload, options: CustomWebApplicationFactory.JsonOptions));
-
-
-        var response = await _client.PostAsync("/api/accesses/entry", JsonContent.Create(payload, options: CustomWebApplicationFactory.JsonOptions));
-
+        var response = await _client.PostAsync("/api/accesses", JsonContent.Create(payload, options: CustomWebApplicationFactory.JsonOptions));
 
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
     }
 
     [Fact]
-    public async Task PostExit_WhenSuccessfullyEntered_ReturnsCreated()
+    public async Task PostAccess_Exit_WhenSuccessfullyEntered_ReturnsCreated()
     {
-        var tagId = await SeedVehicleAndTagAsync();
-        var payload = new CreateAccessDto { TagId = tagId };
+        var (_, tid, epc) = await SeedVehicleAndTagAsync();
+        var entryPayload = new CreateAccessDto { Tid = tid, Epc = epc, Entrance = true };
+        var exitPayload = new CreateAccessDto { Tid = tid, Epc = epc, Entrance = false };
 
+        await _client.PostAsync("/api/accesses", JsonContent.Create(entryPayload, options: CustomWebApplicationFactory.JsonOptions));
 
-        await _client.PostAsync("/api/accesses/entry", JsonContent.Create(payload, options: CustomWebApplicationFactory.JsonOptions));
-
-
-        var response = await _client.PostAsync("/api/accesses/exit", JsonContent.Create(payload, options: CustomWebApplicationFactory.JsonOptions));
-
+        var response = await _client.PostAsync("/api/accesses", JsonContent.Create(exitPayload, options: CustomWebApplicationFactory.JsonOptions));
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var result = await response.Content.ReadFromJsonAsync<AccessDto>(CustomWebApplicationFactory.JsonOptions);
@@ -111,54 +105,72 @@ public class AccessesControllerTests(CustomWebApplicationFactory factory) : ICla
     }
 
     [Fact]
-    public async Task PostExit_WithoutPriorEntry_ReturnsConflict()
+    public async Task PostAccess_Exit_WithoutPriorEntry_ReturnsConflict()
     {
-        var tagId = await SeedVehicleAndTagAsync();
-        var payload = new CreateAccessDto { TagId = tagId };
+        var (_, tid, epc) = await SeedVehicleAndTagAsync();
+        var payload = new CreateAccessDto { Tid = tid, Epc = epc, Entrance = false };
 
-
-        var response = await _client.PostAsync("/api/accesses/exit", JsonContent.Create(payload, options: CustomWebApplicationFactory.JsonOptions));
-
+        var response = await _client.PostAsync("/api/accesses", JsonContent.Create(payload, options: CustomWebApplicationFactory.JsonOptions));
 
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
     }
 
     [Fact]
-    public async Task PostEntry_WithNonExistentTag_ReturnsNotFound()
+    public async Task PostAccess_WithNonExistentTag_ReturnsNotFound()
     {
-        var payload = new CreateAccessDto { TagId = Guid.NewGuid() };
+        var payload = new CreateAccessDto { Tid = "NONEXISTENT-TID", Epc = "NONEXISTENT-EPC", Entrance = true };
 
-
-        var response = await _client.PostAsync("/api/accesses/entry", JsonContent.Create(payload, options: CustomWebApplicationFactory.JsonOptions));
-
+        var response = await _client.PostAsync("/api/accesses", JsonContent.Create(payload, options: CustomWebApplicationFactory.JsonOptions));
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
-    public async Task PostEntry_WithInactiveTag_ReturnsConflict()
+    public async Task PostAccess_Entry_WithInactiveTag_ReturnsConflict()
     {
-        var tagId = await SeedVehicleAndTagAsync(TagStatus.INACTIVE);
-        var payload = new CreateAccessDto { TagId = tagId };
+        var (_, tid, epc) = await SeedVehicleAndTagAsync(TagStatus.INACTIVE);
+        var payload = new CreateAccessDto { Tid = tid, Epc = epc, Entrance = true };
 
-
-        var response = await _client.PostAsync("/api/accesses/entry", JsonContent.Create(payload, options: CustomWebApplicationFactory.JsonOptions));
-
+        var response = await _client.PostAsync("/api/accesses", JsonContent.Create(payload, options: CustomWebApplicationFactory.JsonOptions));
 
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
     }
 
     [Fact]
-    public async Task PostExit_WithInactiveTag_ReturnsConflict()
+    public async Task PostAccess_Exit_WithInactiveTag_ReturnsConflict()
     {
-        var tagId = await SeedVehicleAndTagAsync(TagStatus.INACTIVE);
+        var (tagId, tid, epc) = await SeedVehicleAndTagAsync(TagStatus.INACTIVE);
         await SeedAccessAsync(tagId, AccessType.Entry);
-        var payload = new CreateAccessDto { TagId = tagId };
+        var payload = new CreateAccessDto { Tid = tid, Epc = epc, Entrance = false };
 
-
-        var response = await _client.PostAsync("/api/accesses/exit", JsonContent.Create(payload, options: CustomWebApplicationFactory.JsonOptions));
-
+        var response = await _client.PostAsync("/api/accesses", JsonContent.Create(payload, options: CustomWebApplicationFactory.JsonOptions));
 
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetAccesses_WhenEmpty_ReturnsOkWithEmptyList()
+    {
+        var response = await _client.GetAsync("/api/accesses");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<List<AccessDto>>(CustomWebApplicationFactory.JsonOptions);
+        Assert.NotNull(result);
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetAccesses_WithSeededData_ReturnsAllAccesses()
+    {
+        var (tagId, _, _) = await SeedVehicleAndTagAsync();
+        await SeedAccessAsync(tagId, AccessType.Entry);
+        await SeedAccessAsync(tagId, AccessType.Exit);
+
+        var response = await _client.GetAsync("/api/accesses");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<List<AccessDto>>(CustomWebApplicationFactory.JsonOptions);
+        Assert.NotNull(result);
+        Assert.Equal(2, result.Count);
     }
 }
