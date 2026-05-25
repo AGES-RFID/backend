@@ -1,23 +1,21 @@
 namespace Backend.Features.Accesses;
 
-using System.Text.Json.Serialization;
-
 public class AccessDto
 {
-    [JsonPropertyName("access_id")]
     public Guid AccessId { get; set; }
-
-    [JsonPropertyName("tag_id")]
     public required Guid TagId { get; set; }
-
     public AccessType Type { get; set; }
     public DateTime Timestamp { get; set; }
+    public string? Plate { get; set; }
+    public decimal? Value { get; set; }
 
     public static AccessDto FromModel(Access access) => new()
     {
         AccessId = access.AccessId,
         TagId = access.TagId,
         Type = access.Type,
-        Timestamp = access.Timestamp
+        Timestamp = access.Timestamp,
+        Plate = null,
+        Value = null
     };
 }

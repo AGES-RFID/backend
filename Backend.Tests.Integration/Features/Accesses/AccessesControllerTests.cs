@@ -1,19 +1,29 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Security.Claims;
+using System.Text;
 using Backend.Database;
 using Backend.Features.Accesses;
 using Backend.Features.Tags;
 using Backend.Features.Tags.Enums;
+using Backend.Features.Transactions;
 using Backend.Features.Users;
 using Backend.Features.Vehicles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.IdentityModel.Tokens;
 using tests.Setup;
 
 namespace Backend.Tests.Integration.Features.Accesses;
 
 public class AccessesControllerTests(CustomWebApplicationFactory factory) : IClassFixture<CustomWebApplicationFactory>, IAsyncLifetime
 {
+    private const string JwtIssuer = "backend";
+    private const string JwtAudience = "frontend";
+    private const string JwtSecret = "your-super-secret-key-change-this-in-production-at-least-32-characters!";
+
     private readonly HttpClient _client = factory.CreateClient();
     private readonly IServiceScopeFactory _scopeFactory = factory.Services.GetRequiredService<IServiceScopeFactory>();
 
@@ -24,7 +34,53 @@ public class AccessesControllerTests(CustomWebApplicationFactory factory) : ICla
 
     public Task DisposeAsync() => Task.CompletedTask;
 
-    private async Task<(Guid TagId, string Tid, string Epc)> SeedVehicleAndTagAsync(TagStatus status = TagStatus.IN_USE)
+    private async Task<User> SeedUserAsync(UserRole role)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var user = new User
+        {
+            Name = $"User-{Guid.NewGuid()}",
+            Email = $"user_{Guid.NewGuid()}@example.com",
+            PasswordHash = "hash",
+            Role = role
+        };
+
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        return user;
+    }
+
+    private static string CreateJwtToken(User user)
+    {
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(JwtSecret));
+        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+        var claims = new List<Claim>
+        {
+            new(JwtRegisteredClaimNames.Sub, user.UserId.ToString()),
+            new("role", user.Role.ToString())
+        };
+
+        var token = new JwtSecurityToken(
+            issuer: JwtIssuer,
+            audience: JwtAudience,
+            claims: claims,
+            expires: DateTime.UtcNow.AddHours(1),
+            signingCredentials: credentials);
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    private void SetAuthHeader(User user)
+    {
+        var token = CreateJwtToken(user);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+    }
+
+    private async Task<(Guid TagId, string Tid, string Epc)> SeedVehicleAndTagAsync(TagStatus status = TagStatus.IN_USE, string? plate = null)
     {
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -37,25 +93,56 @@ public class AccessesControllerTests(CustomWebApplicationFactory factory) : ICla
         var tag = new Tag { Status = status, Epc = epc, Tid = tid };
         db.Tags.Add(tag);
 
-        db.Vehicles.Add(new Vehicle { UserId = user.UserId, TagId = tag.TagId, Plate = $"TST{Guid.NewGuid().ToString()[..4].ToUpper()}", Brand = "VW", Model = "Gol" });
+        db.Vehicles.Add(new Vehicle
+        {
+            UserId = user.UserId,
+            TagId = tag.TagId,
+            Plate = plate ?? $"TST{Guid.NewGuid().ToString()[..4].ToUpper()}",
+            Brand = "VW",
+            Model = "Gol"
+        });
 
         await db.SaveChangesAsync();
         return (tag.TagId, tid, epc);
     }
 
-    private async Task SeedAccessAsync(Guid tagId, AccessType type)
+    private async Task<Guid> SeedAccessAsync(Guid tagId, AccessType type, DateTime? timestamp = null)
     {
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var tag = await db.Tags.FirstAsync(t => t.TagId == tagId);
 
-        db.Accesses.Add(new Access
+        var access = new Access
         {
             TagId = tagId,
             Tag = tag,
             Type = type,
-            Timestamp = DateTime.UtcNow.AddMinutes(-5)
+            Timestamp = timestamp ?? DateTime.UtcNow.AddMinutes(-5)
+        };
+
+        db.Accesses.Add(access);
+
+        await db.SaveChangesAsync();
+
+        return access.AccessId;
+    }
+
+    private async Task SeedTransactionAsync(Guid accessId, decimal amount, DateTime createdAt)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var user = await db.Users.FirstAsync();
+
+        db.Transactions.Add(new Transaction
+        {
+            UserId = user.UserId,
+            AccessId = accessId,
+            Amount = amount,
+            Description = "Saída",
+            TransactionType = TransactionType.WITHDRAWAL,
+            CreatedAt = createdAt,
         });
 
         await db.SaveChangesAsync();
@@ -149,8 +236,32 @@ public class AccessesControllerTests(CustomWebApplicationFactory factory) : ICla
     }
 
     [Fact]
-    public async Task GetAccesses_WhenEmpty_ReturnsOkWithEmptyList()
+    public async Task GetAccesses_WhenNotAuthenticated_ReturnsUnauthorized()
     {
+        _client.DefaultRequestHeaders.Authorization = null;
+
+        var response = await _client.GetAsync("/api/accesses");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetAccesses_WhenCustomerAuthenticated_ReturnsForbidden()
+    {
+        var customer = await SeedUserAsync(UserRole.Customer);
+        SetAuthHeader(customer);
+
+        var response = await _client.GetAsync("/api/accesses");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetAccesses_WhenAdminAndEmpty_ReturnsOkWithEmptyList()
+    {
+        var admin = await SeedUserAsync(UserRole.Admin);
+        SetAuthHeader(admin);
+
         var response = await _client.GetAsync("/api/accesses");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -160,17 +271,55 @@ public class AccessesControllerTests(CustomWebApplicationFactory factory) : ICla
     }
 
     [Fact]
-    public async Task GetAccesses_WithSeededData_ReturnsAllAccesses()
+    public async Task GetAccesses_WithAccessTypeExit_ReturnsOnlyExitsWithPlateAndNullableValue()
     {
-        var (tagId, _, _) = await SeedVehicleAndTagAsync();
-        await SeedAccessAsync(tagId, AccessType.Entry);
-        await SeedAccessAsync(tagId, AccessType.Exit);
+        var admin = await SeedUserAsync(UserRole.Admin);
+        SetAuthHeader(admin);
 
-        var response = await _client.GetAsync("/api/accesses");
+        var (entryTagId, _, _) = await SeedVehicleAndTagAsync();
+        var (exitTagIdWithCharge, _, _) = await SeedVehicleAndTagAsync();
+        var (exitTagIdWithoutCharge, _, _) = await SeedVehicleAndTagAsync();
+
+        await SeedAccessAsync(entryTagId, AccessType.Entry);
+
+        var chargedExitId = await SeedAccessAsync(exitTagIdWithCharge, AccessType.Exit);
+        await SeedTransactionAsync(chargedExitId, 17.5m, DateTime.UtcNow.AddMinutes(-1));
+
+        await SeedAccessAsync(exitTagIdWithoutCharge, AccessType.Exit);
+
+        var response = await _client.GetAsync("/api/accesses?accessType=exit");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
         var result = await response.Content.ReadFromJsonAsync<List<AccessDto>>(CustomWebApplicationFactory.JsonOptions);
         Assert.NotNull(result);
         Assert.Equal(2, result.Count);
+        Assert.All(result, row => Assert.Equal(AccessType.Exit, row.Type));
+        Assert.All(result, row => Assert.False(string.IsNullOrWhiteSpace(row.Plate)));
+        Assert.Contains(result, row => row.Value is null);
+        Assert.Contains(result, row => row.Value == 17.5m);
+    }
+
+    [Fact]
+    public async Task GetAccesses_WhenMultipleTransactionsForSameAccess_UsesLatestTransactionValue()
+    {
+        var admin = await SeedUserAsync(UserRole.Admin);
+        SetAuthHeader(admin);
+
+        var (tagId, _, _) = await SeedVehicleAndTagAsync();
+        var accessId = await SeedAccessAsync(tagId, AccessType.Exit);
+
+        await SeedTransactionAsync(accessId, 10m, DateTime.UtcNow.AddMinutes(-10));
+        await SeedTransactionAsync(accessId, 25m, DateTime.UtcNow.AddMinutes(-1));
+
+        var response = await _client.GetAsync("/api/accesses?accessType=exit");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var result = await response.Content.ReadFromJsonAsync<List<AccessDto>>(CustomWebApplicationFactory.JsonOptions);
+        Assert.NotNull(result);
+
+        var row = Assert.Single(result);
+        Assert.Equal(25m, row.Value);
     }
 }
