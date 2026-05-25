@@ -7,21 +7,21 @@ namespace Backend.Tests.Unit.Features.Accesses;
 
 public class AccessesControllerTests
 {
+    private static CreateAccessDto MakeDto(bool entrance = true) =>
+        new() { Tid = "TID-001", Epc = "EPC-001", Entrance = entrance };
+
     [Fact]
-    public async Task RegisterEntry_WhenSuccess_ReturnsCreated()
+    public async Task RegisterAccess_Entry_WhenSuccess_ReturnsCreated()
     {
-        var tagId = Guid.NewGuid();
-        var dto = new CreateAccessDto { TagId = tagId };
-        var expected = new AccessDto { AccessId = Guid.NewGuid(), TagId = tagId, Type = AccessType.Entry, Timestamp = DateTime.UtcNow };
+        var dto = MakeDto(entrance: true);
+        var expected = new AccessDto { AccessId = Guid.NewGuid(), TagId = Guid.NewGuid(), Type = AccessType.Entry, Timestamp = DateTime.UtcNow };
 
         var service = Substitute.For<IAccessesService>();
-        service.RegisterEntryAsync(dto).Returns(expected);
+        service.RegisterAccessAsync(dto).Returns(expected);
 
         var controller = new AccessesController(service);
 
-
-        var result = await controller.RegisterEntry(dto);
-
+        var result = await controller.RegisterAccess(dto);
 
         var createdResult = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(201, createdResult.StatusCode);
@@ -29,49 +29,43 @@ public class AccessesControllerTests
     }
 
     [Fact]
-    public async Task RegisterEntry_WhenTagNotFound_ReturnsNotFound()
+    public async Task RegisterAccess_WhenTagNotFound_ReturnsNotFound()
     {
-        var dto = new CreateAccessDto { TagId = Guid.NewGuid() };
+        var dto = MakeDto();
         var service = Substitute.For<IAccessesService>();
-        service.RegisterEntryAsync(dto).ThrowsAsync(new KeyNotFoundException("Tag not found"));
+        service.RegisterAccessAsync(dto).ThrowsAsync(new KeyNotFoundException("Tag not found"));
 
         var controller = new AccessesController(service);
 
-
-        var result = await controller.RegisterEntry(dto);
-
+        var result = await controller.RegisterAccess(dto);
 
         Assert.IsType<NotFoundObjectResult>(result.Result);
     }
 
     [Fact]
-    public async Task RegisterEntry_WhenTagInactive_ReturnsConflict()
+    public async Task RegisterAccess_WhenTagInactive_ReturnsConflict()
     {
-        var dto = new CreateAccessDto { TagId = Guid.NewGuid() };
+        var dto = MakeDto();
         var service = Substitute.For<IAccessesService>();
-        service.RegisterEntryAsync(dto).ThrowsAsync(new InvalidOperationException("Tag inactive"));
+        service.RegisterAccessAsync(dto).ThrowsAsync(new InvalidOperationException("Tag inactive"));
 
         var controller = new AccessesController(service);
 
-
-        var result = await controller.RegisterEntry(dto);
-
+        var result = await controller.RegisterAccess(dto);
 
         Assert.IsType<ConflictObjectResult>(result.Result);
     }
 
     [Fact]
-    public async Task RegisterExit_WhenAlreadyOutside_ReturnsConflict()
+    public async Task RegisterAccess_Exit_WhenAlreadyOutside_ReturnsConflict()
     {
-        var dto = new CreateAccessDto { TagId = Guid.NewGuid() };
+        var dto = MakeDto(entrance: false);
         var service = Substitute.For<IAccessesService>();
-        service.RegisterExitAsync(dto).ThrowsAsync(new InvalidOperationException("Already outside"));
+        service.RegisterAccessAsync(dto).ThrowsAsync(new InvalidOperationException("Already outside"));
 
         var controller = new AccessesController(service);
 
-
-        var result = await controller.RegisterExit(dto);
-
+        var result = await controller.RegisterAccess(dto);
 
         Assert.IsType<ConflictObjectResult>(result.Result);
     }
