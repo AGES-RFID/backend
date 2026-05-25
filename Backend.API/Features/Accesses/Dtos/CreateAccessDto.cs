@@ -1,9 +1,8 @@
-using System.ComponentModel.DataAnnotations;
-
 namespace Backend.Features.Accesses;
 
 public class CreateAccessDto
 {
-    [Required(ErrorMessage = "TagId is required.")]
-    public required Guid TagId { get; set; }
+    public required string Tid { get; init; }
+    public required string Epc { get; init; }
+    public bool Entrance { get; init; }
 }
