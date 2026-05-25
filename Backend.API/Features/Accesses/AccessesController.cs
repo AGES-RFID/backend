@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Backend.Features.Accesses;
@@ -9,9 +10,13 @@ public class AccessesController(IAccessesService accessService) : ControllerBase
     private readonly IAccessesService _accessService = accessService;
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<AccessDto>>> GetAccesses()
+    [Authorize(Roles = "Admin")]
+    public async Task<ActionResult<IEnumerable<AccessDto>>> GetAccesses([FromQuery] string? accessType = null)
     {
-        var accesses = await _accessService.GetAccessesAsync();
+        if (!TryParseAccessType(accessType, out var parsedType))
+            return BadRequest(new { error = "O parâmetro 'accessType' é inválido." });
+
+        var accesses = await _accessService.GetAccessesAsync(parsedType);
         return Ok(accesses);
     }
 
@@ -35,5 +40,19 @@ public class AccessesController(IAccessesService accessService) : ControllerBase
         {
             return StatusCode(StatusCodes.Status500InternalServerError, new { error = "Ocorreu um erro interno no servidor." });
         }
+    }
+
+    private static bool TryParseAccessType(string? accessType, out AccessType? parsedType)
+    {
+        parsedType = null;
+
+        if (string.IsNullOrWhiteSpace(accessType))
+            return true;
+
+        if (!Enum.TryParse<AccessType>(accessType, ignoreCase: true, out var parsed))
+            return false;
+
+        parsedType = parsed;
+        return true;
     }
 }

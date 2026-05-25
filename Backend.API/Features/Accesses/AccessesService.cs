@@ -7,7 +7,7 @@ namespace Backend.Features.Accesses;
 
 public interface IAccessesService
 {
-    Task<IEnumerable<AccessDto>> GetAccessesAsync();
+    Task<IEnumerable<AccessDto>> GetAccessesAsync(AccessType? accessType = null);
     Task<AccessDto> RegisterAccessAsync(CreateAccessDto dto);
 }
 
@@ -15,13 +15,36 @@ public class AccessesService(AppDbContext db) : IAccessesService
 {
     private readonly AppDbContext _db = db;
 
-    public async Task<IEnumerable<AccessDto>> GetAccessesAsync()
+    public async Task<IEnumerable<AccessDto>> GetAccessesAsync(AccessType? accessType = null)
     {
-        var accesses = await _db.Accesses
-            .OrderByDescending(a => a.Timestamp)
-            .ToListAsync();
+        var accessesQuery = _db.Accesses.AsNoTracking();
 
-        return accesses.Select(AccessDto.FromModel);
+        if (accessType.HasValue)
+        {
+            accessesQuery = accessesQuery.Where(a => a.Type == accessType.Value);
+        }
+
+        var query =
+            from access in accessesQuery
+            join tag in _db.Tags.AsNoTracking() on access.TagId equals tag.TagId
+            join vehicle in _db.Vehicles.AsNoTracking() on tag.TagId equals vehicle.TagId
+            where !string.IsNullOrWhiteSpace(vehicle.Plate)
+            orderby access.Timestamp descending
+            select new AccessDto
+            {
+                AccessId = access.AccessId,
+                TagId = access.TagId,
+                Type = access.Type,
+                Timestamp = access.Timestamp,
+                Plate = vehicle.Plate,
+                Value = _db.Transactions
+                    .Where(t => t.AccessId == access.AccessId)
+                    .OrderByDescending(t => t.CreatedAt)
+                    .Select(t => (decimal?)t.Amount)
+                    .FirstOrDefault()
+            };
+
+        return await query.ToListAsync();
     }
 
     public async Task<AccessDto> RegisterAccessAsync(CreateAccessDto dto)
