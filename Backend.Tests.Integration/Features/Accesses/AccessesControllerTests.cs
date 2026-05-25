@@ -147,4 +147,30 @@ public class AccessesControllerTests(CustomWebApplicationFactory factory) : ICla
 
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
     }
+
+    [Fact]
+    public async Task GetAccesses_WhenEmpty_ReturnsOkWithEmptyList()
+    {
+        var response = await _client.GetAsync("/api/accesses");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<List<AccessDto>>(CustomWebApplicationFactory.JsonOptions);
+        Assert.NotNull(result);
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetAccesses_WithSeededData_ReturnsAllAccesses()
+    {
+        var (tagId, _, _) = await SeedVehicleAndTagAsync();
+        await SeedAccessAsync(tagId, AccessType.Entry);
+        await SeedAccessAsync(tagId, AccessType.Exit);
+
+        var response = await _client.GetAsync("/api/accesses");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<List<AccessDto>>(CustomWebApplicationFactory.JsonOptions);
+        Assert.NotNull(result);
+        Assert.Equal(2, result.Count);
+    }
 }
