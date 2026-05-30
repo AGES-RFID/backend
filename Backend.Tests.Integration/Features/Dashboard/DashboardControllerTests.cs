@@ -15,7 +15,6 @@ namespace tests.Features.Dashboard;
 public class DashboardControllerTests(CustomWebApplicationFactory factory)
     : IClassFixture<CustomWebApplicationFactory>, IAsyncLifetime
 {
-    private readonly HttpClient _client = factory.CreateClient();
     private readonly IServiceScopeFactory _scopeFactory =
         factory.Services.GetRequiredService<IServiceScopeFactory>();
 
@@ -76,7 +75,8 @@ public class DashboardControllerTests(CustomWebApplicationFactory factory)
     [Fact]
     public async Task GetOccupancy_WhenNoAccesses_ReturnsZeroOccupancy()
     {
-        var response = await _client.GetAsync("/api/dashboard/occupancy");
+        var adminClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Admin);
+        var response = await adminClient.GetAsync("/api/dashboard/occupancy");
 
         response.EnsureSuccessStatusCode();
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -92,10 +92,11 @@ public class DashboardControllerTests(CustomWebApplicationFactory factory)
     [Fact]
     public async Task GetOccupancy_WhenOneVehicleEntered_ReturnsOccupancyOne()
     {
+        var adminClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Admin);
         var (_, _, tag) = await SeedVehicleWithTagAsync("ENTR001");
         await SeedAccessAsync(tag.TagId, AccessType.Entry, DateTime.UtcNow);
 
-        var response = await _client.GetAsync("/api/dashboard/occupancy");
+        var response = await adminClient.GetAsync("/api/dashboard/occupancy");
 
         response.EnsureSuccessStatusCode();
         var body = await response.Content.ReadFromJsonAsync<OccupancyDto>(
@@ -110,12 +111,13 @@ public class DashboardControllerTests(CustomWebApplicationFactory factory)
     [Fact]
     public async Task GetOccupancy_WhenVehicleExited_IsNotCountedAsInside()
     {
+        var adminClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Admin);
         var (_, _, tag) = await SeedVehicleWithTagAsync("EXIT001");
         var baseTime = DateTime.UtcNow;
         await SeedAccessAsync(tag.TagId, AccessType.Entry, baseTime.AddMinutes(-10));
         await SeedAccessAsync(tag.TagId, AccessType.Exit, baseTime);
 
-        var response = await _client.GetAsync("/api/dashboard/occupancy");
+        var response = await adminClient.GetAsync("/api/dashboard/occupancy");
 
         response.EnsureSuccessStatusCode();
         var body = await response.Content.ReadFromJsonAsync<OccupancyDto>(
@@ -129,6 +131,7 @@ public class DashboardControllerTests(CustomWebApplicationFactory factory)
     [Fact]
     public async Task GetOccupancy_OnlyCountsVehiclesWhoseLastAccessIsEntry()
     {
+        var adminClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Admin);
         var baseTime = DateTime.UtcNow;
         //Access flow(Entry)
         var (_, _, tagA) = await SeedVehicleWithTagAsync("CAR-A");
@@ -143,7 +146,7 @@ public class DashboardControllerTests(CustomWebApplicationFactory factory)
         await SeedAccessAsync(tagC.TagId, AccessType.Exit, baseTime.AddMinutes(-40));
         await SeedAccessAsync(tagC.TagId, AccessType.Entry, baseTime.AddMinutes(-2));
 
-        var response = await _client.GetAsync("/api/dashboard/occupancy");
+        var response = await adminClient.GetAsync("/api/dashboard/occupancy");
 
         response.EnsureSuccessStatusCode();
         var body = await response.Content.ReadFromJsonAsync<OccupancyDto>(
@@ -162,14 +165,16 @@ public class DashboardControllerTests(CustomWebApplicationFactory factory)
     [Fact]
     public async Task GetOccupancy_ReturnsOkStatusCode()
     {
-        var response = await _client.GetAsync("/api/dashboard/occupancy");
+        var adminClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Admin);
+        var response = await adminClient.GetAsync("/api/dashboard/occupancy");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
     [Fact]
     public async Task GetMetrics_ShouldReturnOk()
     {
-        var response = await _client.GetAsync("/api/dashboard/metrics");
+        var adminClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Admin);
+        var response = await adminClient.GetAsync("/api/dashboard/metrics");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
@@ -177,7 +182,8 @@ public class DashboardControllerTests(CustomWebApplicationFactory factory)
     [Fact]
     public async Task GetMetrics_WhenNoAccesses_ShouldReturnZerosAndNullPeakTime()
     {
-        var response = await _client.GetAsync("/api/dashboard/metrics");
+        var adminClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Admin);
+        var response = await adminClient.GetAsync("/api/dashboard/metrics");
         response.EnsureSuccessStatusCode();
 
         var metrics = await response.Content.ReadFromJsonAsync<DashboardMetricsDto>(CustomWebApplicationFactory.JsonOptions);
@@ -191,7 +197,8 @@ public class DashboardControllerTests(CustomWebApplicationFactory factory)
     [Fact]
     public async Task GetMetrics_ShouldReturnCorrectFields()
     {
-        var response = await _client.GetAsync("/api/dashboard/metrics");
+        var adminClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Admin);
+        var response = await adminClient.GetAsync("/api/dashboard/metrics");
         response.EnsureSuccessStatusCode();
 
         var metrics = await response.Content.ReadFromJsonAsync<DashboardMetricsDto>(CustomWebApplicationFactory.JsonOptions);
@@ -199,5 +206,45 @@ public class DashboardControllerTests(CustomWebApplicationFactory factory)
         Assert.NotNull(metrics);
         Assert.True(metrics.EntriesLastHour >= 0);
         Assert.True(metrics.ExitsLastHour >= 0);
+    }
+
+    [Fact]
+    public async Task GetOccupancy_WhenNotAuthenticated_ReturnsUnauthorized()
+    {
+        var anonymousClient = AuthTestHelper.CreateAnonymousClient(factory);
+
+        var response = await anonymousClient.GetAsync("/api/dashboard/occupancy");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetMetrics_WhenNotAuthenticated_ReturnsUnauthorized()
+    {
+        var anonymousClient = AuthTestHelper.CreateAnonymousClient(factory);
+
+        var response = await anonymousClient.GetAsync("/api/dashboard/metrics");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetOccupancy_WhenCustomerAuthenticated_ReturnsForbidden()
+    {
+        var customerClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Customer);
+
+        var response = await customerClient.GetAsync("/api/dashboard/occupancy");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetMetrics_WhenCustomerAuthenticated_ReturnsForbidden()
+    {
+        var customerClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Customer);
+
+        var response = await customerClient.GetAsync("/api/dashboard/metrics");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 }
