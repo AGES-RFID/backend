@@ -1,25 +1,16 @@
 using System.Net;
-using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
 using Backend.Database;
 using Backend.Features.Transactions;
 using Backend.Features.Users;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.IdentityModel.Tokens;
 using tests.Setup;
 
 namespace tests.Features.Transactions;
 
 public class TransactionControllerTests(CustomWebApplicationFactory factory) : IClassFixture<CustomWebApplicationFactory>, IAsyncLifetime
 {
-    private const string JwtIssuer = "backend";
-    private const string JwtAudience = "frontend";
-    private const string JwtSecret = "your-super-secret-key-change-this-in-production-at-least-32-characters!";
-
-    private readonly HttpClient _client = factory.CreateClient();
     private readonly IServiceScopeFactory _scopeFactory = factory.Services.GetRequiredService<IServiceScopeFactory>();
 
     public async Task InitializeAsync()
@@ -47,39 +38,19 @@ public class TransactionControllerTests(CustomWebApplicationFactory factory) : I
         return user;
     }
 
-    private static string CreateJwtToken(User user)
+    private async Task<User> GetUserByEmailAsync(string email)
     {
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(JwtSecret));
-        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        var claims = new List<Claim>
-        {
-            new(JwtRegisteredClaimNames.Sub, user.UserId.ToString()),
-            new("role", user.Role.ToString())
-        };
-
-        var token = new JwtSecurityToken(
-            issuer: JwtIssuer,
-            audience: JwtAudience,
-            claims: claims,
-            expires: DateTime.UtcNow.AddHours(1),
-            signingCredentials: credentials);
-
-        return new JwtSecurityTokenHandler().WriteToken(token);
-    }
-
-    private void SetAuthHeader(User user)
-    {
-        var token = CreateJwtToken(user);
-        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        return await db.Users.FirstAsync(u => u.Email == email);
     }
 
     [Fact]
     public async Task CreateTransaction_AdminCanCreateForOtherUser_ReturnsCreated()
     {
-        var admin = await SeedUserAsync(UserRole.Admin);
+        var adminClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Admin);
         var customer = await SeedUserAsync(UserRole.Customer);
-        SetAuthHeader(admin);
 
         var payload = new CreateTransactionDto
         {
@@ -88,7 +59,7 @@ public class TransactionControllerTests(CustomWebApplicationFactory factory) : I
             Amount = 10m
         };
 
-        var response = await _client.PostAsync("/api/transactions", JsonContent.Create(payload, options: CustomWebApplicationFactory.JsonOptions));
+        var response = await adminClient.PostAsync("/api/transactions", JsonContent.Create(payload, options: CustomWebApplicationFactory.JsonOptions));
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
 
@@ -101,8 +72,9 @@ public class TransactionControllerTests(CustomWebApplicationFactory factory) : I
     [Fact]
     public async Task CreateTransaction_CustomerCanCreateForSelf_WhenUserIdOmitted()
     {
-        var customer = await SeedUserAsync(UserRole.Customer);
-        SetAuthHeader(customer);
+        const string customerEmail = "customer.self@example.com";
+        var customerClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Customer, email: customerEmail);
+        var customer = await GetUserByEmailAsync(customerEmail);
 
         var payload = new CreateTransactionDto
         {
@@ -110,7 +82,7 @@ public class TransactionControllerTests(CustomWebApplicationFactory factory) : I
             Amount = 25m
         };
 
-        var response = await _client.PostAsync("/api/transactions", JsonContent.Create(payload, options: CustomWebApplicationFactory.JsonOptions));
+        var response = await customerClient.PostAsync("/api/transactions", JsonContent.Create(payload, options: CustomWebApplicationFactory.JsonOptions));
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
 
@@ -122,9 +94,8 @@ public class TransactionControllerTests(CustomWebApplicationFactory factory) : I
     [Fact]
     public async Task CreateTransaction_CustomerCannotCreateForOtherUser_ReturnsForbidden()
     {
-        var customer = await SeedUserAsync(UserRole.Customer);
+        var customerClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Customer);
         var otherCustomer = await SeedUserAsync(UserRole.Customer);
-        SetAuthHeader(customer);
 
         var payload = new CreateTransactionDto
         {
@@ -133,7 +104,7 @@ public class TransactionControllerTests(CustomWebApplicationFactory factory) : I
             Amount = 10m
         };
 
-        var response = await _client.PostAsync("/api/transactions", JsonContent.Create(payload, options: CustomWebApplicationFactory.JsonOptions));
+        var response = await customerClient.PostAsync("/api/transactions", JsonContent.Create(payload, options: CustomWebApplicationFactory.JsonOptions));
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
@@ -141,8 +112,9 @@ public class TransactionControllerTests(CustomWebApplicationFactory factory) : I
     [Fact]
     public async Task CreateTransaction_AdminOmittingUserId_DefaultsToSelf()
     {
-        var admin = await SeedUserAsync(UserRole.Admin);
-        SetAuthHeader(admin);
+        const string adminEmail = "admin.self@example.com";
+        var adminClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Admin, email: adminEmail);
+        var admin = await GetUserByEmailAsync(adminEmail);
 
         var payload = new CreateTransactionDto
         {
@@ -150,7 +122,7 @@ public class TransactionControllerTests(CustomWebApplicationFactory factory) : I
             Amount = 50m
         };
 
-        var response = await _client.PostAsync("/api/transactions", JsonContent.Create(payload, options: CustomWebApplicationFactory.JsonOptions));
+        var response = await adminClient.PostAsync("/api/transactions", JsonContent.Create(payload, options: CustomWebApplicationFactory.JsonOptions));
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
 
@@ -162,7 +134,7 @@ public class TransactionControllerTests(CustomWebApplicationFactory factory) : I
     [Fact]
     public async Task CreateTransaction_WhenUnauthorized_ReturnsUnauthorized()
     {
-        _client.DefaultRequestHeaders.Authorization = null;
+        var anonymousClient = AuthTestHelper.CreateAnonymousClient(factory);
 
         var payload = new CreateTransactionDto
         {
@@ -170,7 +142,7 @@ public class TransactionControllerTests(CustomWebApplicationFactory factory) : I
             Amount = 15m
         };
 
-        var response = await _client.PostAsync("/api/transactions", JsonContent.Create(payload, options: CustomWebApplicationFactory.JsonOptions));
+        var response = await anonymousClient.PostAsync("/api/transactions", JsonContent.Create(payload, options: CustomWebApplicationFactory.JsonOptions));
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -178,8 +150,7 @@ public class TransactionControllerTests(CustomWebApplicationFactory factory) : I
     [Fact]
     public async Task CreateTransaction_WhenTargetUserDoesNotExist_ReturnsNotFound()
     {
-        var admin = await SeedUserAsync(UserRole.Admin);
-        SetAuthHeader(admin);
+        var adminClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Admin);
 
         var payload = new CreateTransactionDto
         {
@@ -188,7 +159,7 @@ public class TransactionControllerTests(CustomWebApplicationFactory factory) : I
             Amount = 10m
         };
 
-        var response = await _client.PostAsync("/api/transactions", JsonContent.Create(payload, options: CustomWebApplicationFactory.JsonOptions));
+        var response = await adminClient.PostAsync("/api/transactions", JsonContent.Create(payload, options: CustomWebApplicationFactory.JsonOptions));
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -196,8 +167,7 @@ public class TransactionControllerTests(CustomWebApplicationFactory factory) : I
     [Fact]
     public async Task CreateTransaction_WhenPayloadInvalid_ReturnsBadRequest()
     {
-        var admin = await SeedUserAsync(UserRole.Admin);
-        SetAuthHeader(admin);
+        var adminClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Admin);
 
         var payload = new CreateTransactionDto
         {
@@ -205,7 +175,7 @@ public class TransactionControllerTests(CustomWebApplicationFactory factory) : I
             Amount = 0m
         };
 
-        var response = await _client.PostAsync("/api/transactions", JsonContent.Create(payload, options: CustomWebApplicationFactory.JsonOptions));
+        var response = await adminClient.PostAsync("/api/transactions", JsonContent.Create(payload, options: CustomWebApplicationFactory.JsonOptions));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -213,10 +183,9 @@ public class TransactionControllerTests(CustomWebApplicationFactory factory) : I
     [Fact]
     public async Task GetMyTransactions_WhenAuthenticated_ReturnsOk()
     {
-        var customer = await SeedUserAsync(UserRole.Customer);
-        SetAuthHeader(customer);
+        var customerClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Customer);
 
-        var response = await _client.GetAsync("/api/transactions");
+        var response = await customerClient.GetAsync("/api/transactions");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
@@ -224,9 +193,9 @@ public class TransactionControllerTests(CustomWebApplicationFactory factory) : I
     [Fact]
     public async Task GetMyTransactions_WhenNotAuthenticated_ReturnsUnauthorized()
     {
-        _client.DefaultRequestHeaders.Authorization = null;
+        var anonymousClient = AuthTestHelper.CreateAnonymousClient(factory);
 
-        var response = await _client.GetAsync("/api/transactions");
+        var response = await anonymousClient.GetAsync("/api/transactions");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -234,10 +203,9 @@ public class TransactionControllerTests(CustomWebApplicationFactory factory) : I
     [Fact]
     public async Task GetMyTransactions_WhenNoTransactions_ReturnsEmptyList()
     {
-        var customer = await SeedUserAsync(UserRole.Customer);
-        SetAuthHeader(customer);
+        var customerClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Customer);
 
-        var response = await _client.GetAsync("/api/transactions");
+        var response = await customerClient.GetAsync("/api/transactions");
         var transactions = await response.Content.ReadFromJsonAsync<List<TransactionDto>>(CustomWebApplicationFactory.JsonOptions);
 
         Assert.NotNull(transactions);
@@ -247,13 +215,12 @@ public class TransactionControllerTests(CustomWebApplicationFactory factory) : I
     [Fact]
     public async Task GetMyTransactions_AfterCreating_ReturnsOwnTransactions()
     {
-        var customer = await SeedUserAsync(UserRole.Customer);
-        SetAuthHeader(customer);
+        var customerClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Customer);
 
         var dto = new CreateTransactionDto { Description = "Depósito", Amount = 100 };
-        await _client.PostAsync("/api/transactions", JsonContent.Create(dto, options: CustomWebApplicationFactory.JsonOptions));
+        await customerClient.PostAsync("/api/transactions", JsonContent.Create(dto, options: CustomWebApplicationFactory.JsonOptions));
 
-        var response = await _client.GetAsync("/api/transactions");
+        var response = await customerClient.GetAsync("/api/transactions");
         var transactions = await response.Content.ReadFromJsonAsync<List<TransactionDto>>(CustomWebApplicationFactory.JsonOptions);
 
         Assert.NotNull(transactions);
@@ -264,15 +231,13 @@ public class TransactionControllerTests(CustomWebApplicationFactory factory) : I
     [Fact]
     public async Task GetMyTransactions_ReturnsOnlyOwnTransactions()
     {
-        var customer1 = await SeedUserAsync(UserRole.Customer);
-        var customer2 = await SeedUserAsync(UserRole.Customer);
+        var customer1Client = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Customer);
+        var customer2Client = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Customer);
 
-        SetAuthHeader(customer1);
         var dto = new CreateTransactionDto { Description = "Depósito", Amount = 50 };
-        await _client.PostAsync("/api/transactions", JsonContent.Create(dto, options: CustomWebApplicationFactory.JsonOptions));
+        await customer1Client.PostAsync("/api/transactions", JsonContent.Create(dto, options: CustomWebApplicationFactory.JsonOptions));
 
-        SetAuthHeader(customer2);
-        var response = await _client.GetAsync("/api/transactions");
+        var response = await customer2Client.GetAsync("/api/transactions");
         var transactions = await response.Content.ReadFromJsonAsync<List<TransactionDto>>(CustomWebApplicationFactory.JsonOptions);
 
         Assert.Empty(transactions!);
