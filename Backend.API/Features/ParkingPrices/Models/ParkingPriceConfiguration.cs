@@ -22,6 +22,10 @@ public class ParkingPricesConfiguration : IEntityTypeConfiguration<ParkingPrice>
             .IsRequired()
             .HasDefaultValue(3 * 60);
 
+        builder.Property(p => p.MaxOccupancy)
+            .IsRequired()
+            .HasDefaultValue(100);    
+
         builder.Property(p => p.HourlyRate)
             .IsRequired()
             .HasColumnType("decimal(14,2)")

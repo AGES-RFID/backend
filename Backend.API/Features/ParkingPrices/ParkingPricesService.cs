@@ -54,6 +54,7 @@ public class ParkingPricesService(AppDbContext db) : IParkingPricesService
         {
             ToleranceMinutes = dto.ToleranceMinutes,
             BasePrice = dto.BasePrice,
+            MaxOccupancy = dto.MaxOccupancy,
             HourlyRate = dto.HourlyRate,
             ThresholdMinutes = dto.ThresholdMinutes
         };
@@ -74,6 +75,7 @@ public class ParkingPricesService(AppDbContext db) : IParkingPricesService
         parkingPrice.BasePrice = dto.BasePrice ?? parkingPrice.BasePrice;
         parkingPrice.HourlyRate = dto.HourlyRate ?? parkingPrice.HourlyRate;
         parkingPrice.ThresholdMinutes = dto.ThresholdMinutes ?? parkingPrice.ThresholdMinutes;
+        parkingPrice.MaxOccupancy = dto.MaxOccupancy ?? parkingPrice.MaxOccupancy;
         parkingPrice.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();

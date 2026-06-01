@@ -6,6 +6,7 @@ public class ParkingPricesDto
     public int ToleranceMinutes { get; init; }
     public decimal BasePrice { get; init; }
     public int ThresholdMinutes { get; init; }
+    public int MaxOccupancy { get; init; }
     public decimal HourlyRate { get; init; }
     public DateTime CreatedAt { get; init; }
     public DateTime UpdatedAt { get; init; }
@@ -16,6 +17,7 @@ public class ParkingPricesDto
         ToleranceMinutes = prices.ToleranceMinutes,
         BasePrice = prices.BasePrice,
         ThresholdMinutes = prices.ThresholdMinutes,
+        MaxOccupancy = prices.MaxOccupancy,
         HourlyRate = prices.HourlyRate,
         CreatedAt = prices.CreatedAt,
         UpdatedAt = prices.UpdatedAt

@@ -7,6 +7,7 @@ public class ParkingPrice
     public decimal BasePrice { get; set; } = 15.00m;
     public decimal HourlyRate { get; set; } = 5.00m;
     public int ThresholdMinutes { get; set; } = 3 * 60;
+    public int MaxOccupancy { get; set; } = 100;
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }

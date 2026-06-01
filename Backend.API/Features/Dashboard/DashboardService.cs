@@ -55,10 +55,28 @@ public class DashboardService(AppDbContext db) : IDashboardService
             .Select(g => g.Key)
             .FirstOrDefaultAsync();
 
+        var currentOccupancy = await _db.Vehicles
+            .AsNoTracking()
+            .Include(v => v.User)
+            .Where(v => v.TagId != null && _db.Accesses
+                .Where(a => a.TagId == v.TagId)
+                .OrderByDescending(a => a.Timestamp)
+                .Select(a => a.Type)
+                .FirstOrDefault() == AccessType.Entry)
+            .CountAsync();   
+
+        var maxOccupancy = await _db.ParkingPrices
+            .AsNoTracking()
+            .OrderByDescending(p => p.UpdatedAt)
+            .ThenByDescending(p => p.CreatedAt)
+            .Select(p => p.MaxOccupancy)
+            .FirstOrDefaultAsync();     
+
         return new DashboardMetricsDto
         {
             EntriesLastHour = entriesLastHour,
             ExitsLastHour = exitsLastHour,
+            CurrentOccupancy = currentOccupancy,
             PeakEntryTime = peakEntryTime == 0 && entriesLastHour == 0
                 ? null
                 : $"{peakEntryTime:D2}:00"

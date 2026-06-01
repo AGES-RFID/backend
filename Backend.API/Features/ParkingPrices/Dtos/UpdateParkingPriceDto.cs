@@ -15,4 +15,7 @@ public class UpdateParkingPriceDto
 
     [Range(1, int.MaxValue, ErrorMessage = "Threshold minutes must be greater than 0")]
     public int? ThresholdMinutes { get; set; }
+
+    [Range(1, int.MaxValue, ErrorMessage = "Max occupancy must be greater than 0")]
+    public int? MaxOccupancy { get; set; }
 }
