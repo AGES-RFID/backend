@@ -22,6 +22,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
     public CustomWebApplicationFactory()
     {
         Environment.SetEnvironmentVariable("SKIP_MIGRATIONS", "true");
+        Environment.SetEnvironmentVariable("SKIP_SEEDING", "true");
     }
 
     // Define the PostgreSQL container
