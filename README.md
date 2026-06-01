@@ -46,6 +46,7 @@ docker compose --profile full up -d --build
 ```
 
 ### Migrações e Seed
+
 As migrações do banco de dados ficam armazenadas em `Backend.API/Database/Migrations`, e são aplicadas automáticamente na inicialização da aplicação.
 
 Para criar uma nova migração, altere os modelos e execute o comando:
@@ -53,6 +54,7 @@ Para criar uma nova migração, altere os modelos e execute o comando:
 > NOTA: É necessário instalar a CLI do Entity Framework Core globalmente para rodar o comando abaixo:
 >
 > Caso já tenha a CLI instalada, não é necessário rodar o comando novamente.
+>
 > ```bash
 > dotnet tool install --global dotnet-ef
 > ```
@@ -61,6 +63,33 @@ Para criar uma nova migração, altere os modelos e execute o comando:
 dotnet ef migrations add NomeDaMigracao --project Backend.API/ --output-dir Database/Migrations
 ```
 
+O seed também é executado roda automaticamente na inicialização, após as migrações. Ele só é aplicado se não houver dados nas tabelas do banco.
+
+Você pode desativar o seed com a variável de ambiente:
+
+```bash
+SKIP_SEEDING=true
+```
+
+Os usuários inseridos pelo seed são:
+
+| Tipo    | Email             | Senha    |
+| ------- | ----------------- | -------- |
+| Admin   | admin@email.com   | password |
+| Cliente | cliente@email.com | password |
+
+#### Já tenho dados no banco. E agora?
+
+Se o seu banco já possui dados, o seed não vai rodar (comportamento esperado).
+
+Se você quiser rodar o seed novamente, você precisa excluir os dados já existentes:
+
+```bash
+docker compose down -v
+docker compose up -d
+```
+
+Depois disso, reinicie a API para o seed executar novamente.
 
 ## Testes
 

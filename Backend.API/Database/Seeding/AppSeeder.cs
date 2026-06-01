@@ -39,8 +39,8 @@ public class AppSeeder(AppDbContext db, ILogger<AppSeeder> logger) : IAppSeeder
 
         var customerUser = new User
         {
-            Name = "Customer",
-            Email = "customer@email.com",
+            Name = "Cliente",
+            Email = "cliente@email.com",
             PasswordHash = BCrypt.Net.BCrypt.HashPassword("password"),
             Role = UserRole.Customer,
             Cpf = "22222222222",
