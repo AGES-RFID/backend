@@ -200,4 +200,69 @@ public class DashboardControllerTests(CustomWebApplicationFactory factory)
         Assert.True(metrics.EntriesLastHour >= 0);
         Assert.True(metrics.ExitsLastHour >= 0);
     }
+
+    [Fact]
+    public async Task GetPeakHours_WhenNoEntries_ReturnsNullPeakHourAndZeroEntries()
+    {
+        var response = await _client.GetAsync("/api/dashboard/peak-hours");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var body = await response.Content.ReadFromJsonAsync<PeakHoursDto>(
+            CustomWebApplicationFactory.JsonOptions);
+
+        Assert.NotNull(body);
+        Assert.Null(body.PeakHour);
+        Assert.Equal(0, body.Entries);
+        Assert.Equal("Last 24 hours", body.Range);
+    }
+
+    [Fact]
+    public async Task GetPeakHours_WhenEntriesExist_ReturnsPeakHourWithMostEntries()
+    {
+        var (_, _, tagA) = await SeedVehicleWithTagAsync("PEAK-A");
+        var (_, _, tagB) = await SeedVehicleWithTagAsync("PEAK-B");
+        var now = DateTime.UtcNow;
+        var peakTime = new DateTime(now.Year, now.Month, now.Day, now.Hour, 0, 0, DateTimeKind.Utc).AddHours(-2);
+
+        // 3 entries at peakTime's hour
+        await SeedAccessAsync(tagA.TagId, AccessType.Entry, peakTime);
+        await SeedAccessAsync(tagA.TagId, AccessType.Entry, peakTime.AddMinutes(10));
+        await SeedAccessAsync(tagB.TagId, AccessType.Entry, peakTime.AddMinutes(20));
+        // 1 entry at a different hour
+        await SeedAccessAsync(tagB.TagId, AccessType.Entry, now.AddHours(-1));
+
+        var response = await _client.GetAsync("/api/dashboard/peak-hours");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var body = await response.Content.ReadFromJsonAsync<PeakHoursDto>(
+            CustomWebApplicationFactory.JsonOptions);
+
+        Assert.NotNull(body);
+        Assert.Equal($"{peakTime.Hour:D2}:00", body.PeakHour);
+        Assert.Equal(3, body.Entries);
+        Assert.Equal("Last 24 hours", body.Range);
+    }
+
+    [Fact]
+    public async Task GetPeakHours_ExitsAreNotCounted()
+    {
+        var (_, _, tag) = await SeedVehicleWithTagAsync("EXIT-ONLY");
+        var now = DateTime.UtcNow;
+
+        await SeedAccessAsync(tag.TagId, AccessType.Exit, now.AddMinutes(-30));
+        await SeedAccessAsync(tag.TagId, AccessType.Exit, now.AddMinutes(-20));
+
+        var response = await _client.GetAsync("/api/dashboard/peak-hours");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var body = await response.Content.ReadFromJsonAsync<PeakHoursDto>(
+            CustomWebApplicationFactory.JsonOptions);
+
+        Assert.NotNull(body);
+        Assert.Null(body.PeakHour);
+        Assert.Equal(0, body.Entries);
+    }
 }
