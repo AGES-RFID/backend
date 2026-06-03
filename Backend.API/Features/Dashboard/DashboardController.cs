@@ -36,4 +36,18 @@ public class DashboardController(IDashboardService dashboardService) : Controlle
             return Problem();
         }
     }
+
+    [HttpGet("peak-hours")]
+    public async Task<ActionResult<PeakHoursDto>> GetPeakHours()
+    {
+        try
+        {
+            var peakHours = await _dashboardService.GetPeakHoursAsync();
+            return Ok(peakHours);
+        }
+        catch (Exception)
+        {
+            return Problem();
+        }
+    }
 }
