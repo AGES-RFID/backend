@@ -148,4 +148,76 @@ public class DashboardControllerTests
         Assert.Equal(0, dto.ExitsLastHour);
         Assert.Null(dto.PeakEntryTime);
     }
+
+    [Fact]
+    public async Task GetPeakHours_WhenServiceSucceeds_ReturnsOk()
+    {
+        var expected = new PeakHoursDto { PeakHour = "14:00", Entries = 32 };
+
+        var service = Substitute.For<IDashboardService>();
+        service.GetPeakHoursAsync().Returns(expected);
+
+        var controller = new DashboardController(service);
+        var result = await controller.GetPeakHours();
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var dto = Assert.IsType<PeakHoursDto>(ok.Value);
+        Assert.Equal("14:00", dto.PeakHour);
+        Assert.Equal(32, dto.Entries);
+    }
+
+    [Fact]
+    public async Task GetPeakHours_WhenServiceSucceeds_ReturnsStatusCode200()
+    {
+        var service = Substitute.For<IDashboardService>();
+        service.GetPeakHoursAsync().Returns(new PeakHoursDto());
+
+        var controller = new DashboardController(service);
+        var result = await controller.GetPeakHours();
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        Assert.Equal(200, ok.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetPeakHours_WhenServiceSucceeds_CallsServiceExactlyOnce()
+    {
+        var service = Substitute.For<IDashboardService>();
+        service.GetPeakHoursAsync().Returns(new PeakHoursDto());
+
+        var controller = new DashboardController(service);
+        await controller.GetPeakHours();
+
+        await service.Received(1).GetPeakHoursAsync();
+    }
+
+    [Fact]
+    public async Task GetPeakHours_WhenServiceThrows_Returns500()
+    {
+        var service = Substitute.For<IDashboardService>();
+        service.GetPeakHoursAsync().ThrowsAsync(new Exception("db error"));
+
+        var controller = new DashboardController(service);
+        var result = await controller.GetPeakHours();
+
+        var status = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(500, status.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetPeakHours_WhenNoEntries_ReturnsPeakHourNull()
+    {
+        var expected = new PeakHoursDto { PeakHour = null, Entries = 0 };
+
+        var service = Substitute.For<IDashboardService>();
+        service.GetPeakHoursAsync().Returns(expected);
+
+        var controller = new DashboardController(service);
+        var result = await controller.GetPeakHours();
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var dto = Assert.IsType<PeakHoursDto>(ok.Value);
+        Assert.Null(dto.PeakHour);
+        Assert.Equal(0, dto.Entries);
+    }
 }

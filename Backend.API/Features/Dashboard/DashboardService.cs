@@ -9,6 +9,7 @@ public interface IDashboardService
 {
     Task<OccupancyDto> GetOccupancyAsync();
     Task<DashboardMetricsDto> GetMetricsAsync();
+    Task<PeakHoursDto> GetPeakHoursAsync();
 }
 
 public class DashboardService(AppDbContext db) : IDashboardService
@@ -62,6 +63,26 @@ public class DashboardService(AppDbContext db) : IDashboardService
             PeakEntryTime = peakEntryTime == 0 && entriesLastHour == 0
                 ? null
                 : $"{peakEntryTime:D2}:00"
+        };
+    }
+
+    public async Task<PeakHoursDto> GetPeakHoursAsync()
+    {
+        var now = DateTime.UtcNow;
+        var twentyFourHoursAgo = now.AddHours(-24);
+
+        var top = await _db.Accesses
+            .AsNoTracking()
+            .Where(a => a.Type == AccessType.Entry && a.Timestamp >= twentyFourHoursAgo)
+            .GroupBy(a => a.Timestamp.Hour)
+            .Select(g => new { Hour = g.Key, Count = g.Count() })
+            .OrderByDescending(g => g.Count)
+            .FirstOrDefaultAsync();
+
+        return new PeakHoursDto
+        {
+            PeakHour = top != null ? $"{top.Hour:D2}:00" : null,
+            Entries = top?.Count ?? 0
         };
     }
 }
