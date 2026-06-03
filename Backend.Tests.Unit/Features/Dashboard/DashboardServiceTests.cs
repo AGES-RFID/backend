@@ -123,4 +123,74 @@ public class DashboardServiceTests
 
         Assert.Null(result.PeakEntryTime);
     }
+
+    [Fact]
+    public async Task GetPeakHoursAsync_WhenNoEntriesInLast24h_ReturnsPeakHourNullAndZeroEntries()
+    {
+        var db = CreateInMemoryDb();
+        var service = new DashboardService(db);
+
+        var result = await service.GetPeakHoursAsync();
+
+        Assert.Null(result.PeakHour);
+        Assert.Equal(0, result.Entries);
+        Assert.Equal("Last 24 hours", result.Range);
+    }
+
+    [Fact]
+    public async Task GetPeakHoursAsync_WhenEntriesExist_ReturnsPeakHourWithHighestCount()
+    {
+        var db = CreateInMemoryDb();
+        var now = DateTime.UtcNow;
+        // two entries at hour H-2, one entry at H-1
+        var peakTime = new DateTime(now.Year, now.Month, now.Day, now.Hour, 0, 0, DateTimeKind.Utc).AddHours(-2);
+
+        db.Accesses.Add(CreateAccess(Guid.NewGuid(), AccessType.Entry, peakTime));
+        db.Accesses.Add(CreateAccess(Guid.NewGuid(), AccessType.Entry, peakTime.AddMinutes(15)));
+        db.Accesses.Add(CreateAccess(Guid.NewGuid(), AccessType.Entry, now.AddHours(-1)));
+        await db.SaveChangesAsync();
+
+        var service = new DashboardService(db);
+        var result = await service.GetPeakHoursAsync();
+
+        Assert.Equal($"{peakTime.Hour:D2}:00", result.PeakHour);
+        Assert.Equal(2, result.Entries);
+        Assert.Equal("Last 24 hours", result.Range);
+    }
+
+    [Fact]
+    public async Task GetPeakHoursAsync_ExitsAreIgnored()
+    {
+        var db = CreateInMemoryDb();
+        var now = DateTime.UtcNow;
+
+        db.Accesses.Add(CreateAccess(Guid.NewGuid(), AccessType.Exit, now.AddMinutes(-10)));
+        db.Accesses.Add(CreateAccess(Guid.NewGuid(), AccessType.Exit, now.AddMinutes(-20)));
+        await db.SaveChangesAsync();
+
+        var service = new DashboardService(db);
+        var result = await service.GetPeakHoursAsync();
+
+        Assert.Null(result.PeakHour);
+        Assert.Equal(0, result.Entries);
+        Assert.Equal("Last 24 hours", result.Range);
+    }
+
+    [Fact]
+    public async Task GetPeakHoursAsync_EntriesOlderThan24h_AreIgnored()
+    {
+        var db = CreateInMemoryDb();
+        var now = DateTime.UtcNow;
+
+        db.Accesses.Add(CreateAccess(Guid.NewGuid(), AccessType.Entry, now.AddHours(-25)));
+        db.Accesses.Add(CreateAccess(Guid.NewGuid(), AccessType.Entry, now.AddHours(-48)));
+        await db.SaveChangesAsync();
+
+        var service = new DashboardService(db);
+        var result = await service.GetPeakHoursAsync();
+
+        Assert.Null(result.PeakHour);
+        Assert.Equal(0, result.Entries);
+        Assert.Equal("Last 24 hours", result.Range);
+    }
 }
