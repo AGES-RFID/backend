@@ -1,9 +1,11 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Backend.Features.Tags;
 
 [ApiController]
 [Route("api/tags")]
+[Authorize(Roles = "Admin")]
 public class TagController(ITagService tagService) : ControllerBase
 {
     private readonly ITagService _tagService = tagService;

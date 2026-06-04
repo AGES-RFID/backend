@@ -1,9 +1,5 @@
-using System.IdentityModel.Tokens.Jwt;
 using System.Net;
-using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using System.Security.Claims;
-using System.Text;
 using Backend.Database;
 using Backend.Features.Accesses;
 using Backend.Features.Tags;
@@ -13,17 +9,12 @@ using Backend.Features.Users;
 using Backend.Features.Vehicles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.IdentityModel.Tokens;
 using tests.Setup;
 
 namespace Backend.Tests.Integration.Features.Accesses;
 
 public class AccessesControllerTests(CustomWebApplicationFactory factory) : IClassFixture<CustomWebApplicationFactory>, IAsyncLifetime
 {
-    private const string JwtIssuer = "backend";
-    private const string JwtAudience = "frontend";
-    private const string JwtSecret = "your-super-secret-key-change-this-in-production-at-least-32-characters!";
-
     private readonly HttpClient _client = factory.CreateClient();
     private readonly IServiceScopeFactory _scopeFactory = factory.Services.GetRequiredService<IServiceScopeFactory>();
 
@@ -33,52 +24,6 @@ public class AccessesControllerTests(CustomWebApplicationFactory factory) : ICla
     }
 
     public Task DisposeAsync() => Task.CompletedTask;
-
-    private async Task<User> SeedUserAsync(UserRole role)
-    {
-        using var scope = _scopeFactory.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-        var user = new User
-        {
-            Name = $"User-{Guid.NewGuid()}",
-            Email = $"user_{Guid.NewGuid()}@example.com",
-            PasswordHash = "hash",
-            Role = role
-        };
-
-        db.Users.Add(user);
-        await db.SaveChangesAsync();
-
-        return user;
-    }
-
-    private static string CreateJwtToken(User user)
-    {
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(JwtSecret));
-        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-        var claims = new List<Claim>
-        {
-            new(JwtRegisteredClaimNames.Sub, user.UserId.ToString()),
-            new("role", user.Role.ToString())
-        };
-
-        var token = new JwtSecurityToken(
-            issuer: JwtIssuer,
-            audience: JwtAudience,
-            claims: claims,
-            expires: DateTime.UtcNow.AddHours(1),
-            signingCredentials: credentials);
-
-        return new JwtSecurityTokenHandler().WriteToken(token);
-    }
-
-    private void SetAuthHeader(User user)
-    {
-        var token = CreateJwtToken(user);
-        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-    }
 
     private async Task<(Guid TagId, string Tid, string Epc)> SeedVehicleAndTagAsync(TagStatus status = TagStatus.IN_USE, string? plate = null)
     {
@@ -238,9 +183,9 @@ public class AccessesControllerTests(CustomWebApplicationFactory factory) : ICla
     [Fact]
     public async Task GetAccesses_WhenNotAuthenticated_ReturnsUnauthorized()
     {
-        _client.DefaultRequestHeaders.Authorization = null;
+        var anonymousClient = AuthTestHelper.CreateAnonymousClient(factory);
 
-        var response = await _client.GetAsync("/api/accesses");
+        var response = await anonymousClient.GetAsync("/api/accesses");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -248,10 +193,9 @@ public class AccessesControllerTests(CustomWebApplicationFactory factory) : ICla
     [Fact]
     public async Task GetAccesses_WhenCustomerAuthenticated_ReturnsForbidden()
     {
-        var customer = await SeedUserAsync(UserRole.Customer);
-        SetAuthHeader(customer);
+        var customerClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Customer);
 
-        var response = await _client.GetAsync("/api/accesses");
+        var response = await customerClient.GetAsync("/api/accesses");
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
@@ -259,10 +203,9 @@ public class AccessesControllerTests(CustomWebApplicationFactory factory) : ICla
     [Fact]
     public async Task GetAccesses_WhenAdminAndEmpty_ReturnsOkWithEmptyList()
     {
-        var admin = await SeedUserAsync(UserRole.Admin);
-        SetAuthHeader(admin);
+        var adminClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Admin);
 
-        var response = await _client.GetAsync("/api/accesses");
+        var response = await adminClient.GetAsync("/api/accesses");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var result = await response.Content.ReadFromJsonAsync<List<AccessDto>>(CustomWebApplicationFactory.JsonOptions);
@@ -273,8 +216,7 @@ public class AccessesControllerTests(CustomWebApplicationFactory factory) : ICla
     [Fact]
     public async Task GetAccesses_WithAccessTypeExit_ReturnsOnlyExitsWithPlateAndNullableValue()
     {
-        var admin = await SeedUserAsync(UserRole.Admin);
-        SetAuthHeader(admin);
+        var adminClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Admin);
 
         var (entryTagId, _, _) = await SeedVehicleAndTagAsync();
         var (exitTagIdWithCharge, _, _) = await SeedVehicleAndTagAsync();
@@ -287,7 +229,7 @@ public class AccessesControllerTests(CustomWebApplicationFactory factory) : ICla
 
         await SeedAccessAsync(exitTagIdWithoutCharge, AccessType.Exit);
 
-        var response = await _client.GetAsync("/api/accesses?accessType=exit");
+        var response = await adminClient.GetAsync("/api/accesses?accessType=exit");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
@@ -303,8 +245,7 @@ public class AccessesControllerTests(CustomWebApplicationFactory factory) : ICla
     [Fact]
     public async Task GetAccesses_WhenMultipleTransactionsForSameAccess_UsesLatestTransactionValue()
     {
-        var admin = await SeedUserAsync(UserRole.Admin);
-        SetAuthHeader(admin);
+        var adminClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Admin);
 
         var (tagId, _, _) = await SeedVehicleAndTagAsync();
         var accessId = await SeedAccessAsync(tagId, AccessType.Exit);
@@ -312,7 +253,7 @@ public class AccessesControllerTests(CustomWebApplicationFactory factory) : ICla
         await SeedTransactionAsync(accessId, 10m, DateTime.UtcNow.AddMinutes(-10));
         await SeedTransactionAsync(accessId, 25m, DateTime.UtcNow.AddMinutes(-1));
 
-        var response = await _client.GetAsync("/api/accesses?accessType=exit");
+        var response = await adminClient.GetAsync("/api/accesses?accessType=exit");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 

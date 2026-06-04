@@ -11,7 +11,7 @@ namespace tests.Features.Tags;
 
 public class TagControllerTests(CustomWebApplicationFactory factory) : IClassFixture<CustomWebApplicationFactory>, IAsyncLifetime
 {
-    private readonly HttpClient _client = factory.CreateClient();
+    private readonly IServiceScopeFactory _scopeFactory = factory.Services.GetRequiredService<IServiceScopeFactory>();
 
     public async Task InitializeAsync()
     {
@@ -22,7 +22,7 @@ public class TagControllerTests(CustomWebApplicationFactory factory) : IClassFix
 
     private async Task SeedUserAsync(User user)
     {
-        using var scope = factory.Services.CreateScope();
+        using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         db.Users.Add(user);
         await db.SaveChangesAsync();
@@ -30,7 +30,7 @@ public class TagControllerTests(CustomWebApplicationFactory factory) : IClassFix
 
     private async Task SeedVehicleAsync(Vehicle vehicle)
     {
-        using var scope = factory.Services.CreateScope();
+        using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         db.Vehicles.Add(vehicle);
         await db.SaveChangesAsync();
@@ -38,7 +38,7 @@ public class TagControllerTests(CustomWebApplicationFactory factory) : IClassFix
 
     private async Task SeedTagAsync(Tag tag)
     {
-        using var scope = factory.Services.CreateScope();
+        using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         if (tag.Vehicle != null)
@@ -50,12 +50,55 @@ public class TagControllerTests(CustomWebApplicationFactory factory) : IClassFix
         await db.SaveChangesAsync();
     }
 
+    public static IEnumerable<object[]> ProtectedTagEndpoints()
+    {
+        yield return ["GET", "/api/tags"];
+        yield return ["POST", "/api/tags"];
+        yield return ["PATCH", $"/api/tags/{Guid.NewGuid()}/deactivate"];
+        yield return ["PATCH", $"/api/tags/{Guid.NewGuid()}/assign-vehicle"];
+    }
+
+    [Theory]
+    [MemberData(nameof(ProtectedTagEndpoints))]
+    public async Task ProtectedEndpoints_WhenNotAuthenticated_ReturnUnauthorized(string method, string path)
+    {
+        var anonymousClient = AuthTestHelper.CreateAnonymousClient(factory);
+
+        HttpResponseMessage response = method switch
+        {
+            "GET" => await anonymousClient.GetAsync(path),
+            "POST" => await anonymousClient.PostAsync(path, JsonContent.Create(new { })),
+            "PATCH" => await anonymousClient.PatchAsync(path, JsonContent.Create(new { })),
+            _ => throw new InvalidOperationException($"Unsupported HTTP method: {method}")
+        };
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Theory]
+    [MemberData(nameof(ProtectedTagEndpoints))]
+    public async Task ProtectedEndpoints_WhenCustomerAuthenticated_ReturnForbidden(string method, string path)
+    {
+        var customerClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Customer);
+
+        HttpResponseMessage response = method switch
+        {
+            "GET" => await customerClient.GetAsync(path),
+            "POST" => await customerClient.PostAsync(path, JsonContent.Create(new { })),
+            "PATCH" => await customerClient.PatchAsync(path, JsonContent.Create(new { })),
+            _ => throw new InvalidOperationException($"Unsupported HTTP method: {method}")
+        };
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
     [Fact]
     public async Task CreateTag_ShouldReturnCreatedTag()
     {
+        var adminClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Admin);
         var newTag = new CreateTagDto { Epc = "EPC-001", Tid = "TID-001" };
 
-        var response = await _client.PostAsync("/api/tags", JsonContent.Create(newTag));
+        var response = await adminClient.PostAsync("/api/tags", JsonContent.Create(newTag));
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
 
@@ -69,12 +112,13 @@ public class TagControllerTests(CustomWebApplicationFactory factory) : IClassFix
     [Fact]
     public async Task GetAllTags_ShouldReturnCreatedTag()
     {
+        var adminClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Admin);
         var newTag = new CreateTagDto { Epc = "EPC-002", Tid = "TID-002" };
 
-        var createResponse = await _client.PostAsync("/api/tags", JsonContent.Create(newTag));
+        var createResponse = await adminClient.PostAsync("/api/tags", JsonContent.Create(newTag));
         Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
 
-        var response = await _client.GetAsync("/api/tags");
+        var response = await adminClient.GetAsync("/api/tags");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
@@ -88,13 +132,14 @@ public class TagControllerTests(CustomWebApplicationFactory factory) : IClassFix
     [Fact]
     public async Task GetAllTags_WithStatusFilter_ShouldReturnOnlyMatchingTags()
     {
+        var adminClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Admin);
         var availableTag = new Tag { Status = Backend.Features.Tags.Enums.TagStatus.AVAILABLE, Epc = "EPC-012", Tid = "TID-012" };
         var inactiveTag = new Tag { Status = Backend.Features.Tags.Enums.TagStatus.INACTIVE, Epc = "EPC-013", Tid = "TID-013" };
 
         await SeedTagAsync(availableTag);
         await SeedTagAsync(inactiveTag);
 
-        var response = await _client.GetAsync("/api/tags?status=AVAILABLE");
+        var response = await adminClient.GetAsync("/api/tags?status=AVAILABLE");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
@@ -109,12 +154,13 @@ public class TagControllerTests(CustomWebApplicationFactory factory) : IClassFix
     [Fact]
     public async Task CreateTag_WhenTagAlreadyExists_ShouldReturnConflict()
     {
+        var adminClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Admin);
         var newTag = new CreateTagDto { Epc = "EPC-003", Tid = "TID-003" };
 
-        var firstResponse = await _client.PostAsync("/api/tags", JsonContent.Create(newTag));
+        var firstResponse = await adminClient.PostAsync("/api/tags", JsonContent.Create(newTag));
         Assert.Equal(HttpStatusCode.Created, firstResponse.StatusCode);
 
-        var secondResponse = await _client.PostAsync("/api/tags", JsonContent.Create(newTag));
+        var secondResponse = await adminClient.PostAsync("/api/tags", JsonContent.Create(newTag));
 
         Assert.Equal(HttpStatusCode.Conflict, secondResponse.StatusCode);
     }
@@ -122,7 +168,9 @@ public class TagControllerTests(CustomWebApplicationFactory factory) : IClassFix
     [Fact]
     public async Task GetAllTags_WithInvalidStatus_ShouldReturnBadRequest()
     {
-        var response = await _client.GetAsync("/api/tags?status=INVALID");
+        var adminClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Admin);
+
+        var response = await adminClient.GetAsync("/api/tags?status=INVALID");
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -130,7 +178,9 @@ public class TagControllerTests(CustomWebApplicationFactory factory) : IClassFix
     [Fact]
     public async Task DeactivateTag_ShouldReturnNotFound_WhenTagDoesNotExist()
     {
-        var response = await _client.PatchAsync($"/api/tags/{Guid.NewGuid()}/deactivate", null);
+        var adminClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Admin);
+
+        var response = await adminClient.PatchAsync($"/api/tags/{Guid.NewGuid()}/deactivate", null);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -138,10 +188,11 @@ public class TagControllerTests(CustomWebApplicationFactory factory) : IClassFix
     [Fact]
     public async Task DeactivateTag_ShouldDeactivateExistingTag()
     {
+        var adminClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Admin);
         var seeded = new Tag { Status = Backend.Features.Tags.Enums.TagStatus.AVAILABLE, Epc = "EPC-005", Tid = "TID-005" };
         await SeedTagAsync(seeded);
 
-        var response = await _client.PatchAsync($"/api/tags/{seeded.TagId}/deactivate", null);
+        var response = await adminClient.PatchAsync($"/api/tags/{seeded.TagId}/deactivate", null);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
@@ -154,6 +205,7 @@ public class TagControllerTests(CustomWebApplicationFactory factory) : IClassFix
     [Fact]
     public async Task AssignVehicle_ShouldAssignVehicleToTag()
     {
+        var adminClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Admin);
         var user = new User { Name = "Alice", Email = "alice@example.com", PasswordHash = "hash", Role = UserRole.Admin };
         await SeedUserAsync(user);
 
@@ -169,7 +221,7 @@ public class TagControllerTests(CustomWebApplicationFactory factory) : IClassFix
         var seeded = new Tag { Status = Backend.Features.Tags.Enums.TagStatus.AVAILABLE, Epc = "EPC-006", Tid = "TID-006" };
         await SeedTagAsync(seeded);
 
-        var response = await _client.PatchAsJsonAsync($"/api/tags/{seeded.TagId}/assign-vehicle", new AssignVehicleDto { VehicleId = vehicle.VehicleId });
+        var response = await adminClient.PatchAsJsonAsync($"/api/tags/{seeded.TagId}/assign-vehicle", new AssignVehicleDto { VehicleId = vehicle.VehicleId });
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
@@ -183,6 +235,7 @@ public class TagControllerTests(CustomWebApplicationFactory factory) : IClassFix
     [Fact]
     public async Task AssignVehicle_ShouldReturnConflict_WhenVehicleAlreadyHasActiveTag()
     {
+        var adminClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Admin);
         var user = new User { Name = "Bob", Email = "bob@example.com", PasswordHash = "hash", Role = UserRole.Admin };
         await SeedUserAsync(user);
 
@@ -201,10 +254,10 @@ public class TagControllerTests(CustomWebApplicationFactory factory) : IClassFix
         await SeedTagAsync(firstTag);
         await SeedTagAsync(secondTag);
 
-        var firstResponse = await _client.PatchAsJsonAsync($"/api/tags/{firstTag.TagId}/assign-vehicle", new AssignVehicleDto { VehicleId = vehicle.VehicleId });
+        var firstResponse = await adminClient.PatchAsJsonAsync($"/api/tags/{firstTag.TagId}/assign-vehicle", new AssignVehicleDto { VehicleId = vehicle.VehicleId });
         Assert.Equal(HttpStatusCode.OK, firstResponse.StatusCode);
 
-        var secondResponse = await _client.PatchAsJsonAsync($"/api/tags/{secondTag.TagId}/assign-vehicle", new AssignVehicleDto { VehicleId = vehicle.VehicleId });
+        var secondResponse = await adminClient.PatchAsJsonAsync($"/api/tags/{secondTag.TagId}/assign-vehicle", new AssignVehicleDto { VehicleId = vehicle.VehicleId });
 
         Assert.Equal(HttpStatusCode.Conflict, secondResponse.StatusCode);
     }
@@ -212,6 +265,7 @@ public class TagControllerTests(CustomWebApplicationFactory factory) : IClassFix
     [Fact]
     public async Task AssignVehicle_ShouldReturnConflict_WhenTagIsAlreadyAssigned()
     {
+        var adminClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Admin);
         var user = new User { Name = "Carol", Email = "carol@example.com", PasswordHash = "hash", Role = UserRole.Admin };
         await SeedUserAsync(user);
 
@@ -233,7 +287,7 @@ public class TagControllerTests(CustomWebApplicationFactory factory) : IClassFix
         };
         await SeedTagAsync(seeded);
 
-        var response = await _client.PatchAsJsonAsync($"/api/tags/{seeded.TagId}/assign-vehicle", new AssignVehicleDto { VehicleId = vehicle.VehicleId });
+        var response = await adminClient.PatchAsJsonAsync($"/api/tags/{seeded.TagId}/assign-vehicle", new AssignVehicleDto { VehicleId = vehicle.VehicleId });
 
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
     }
@@ -241,6 +295,7 @@ public class TagControllerTests(CustomWebApplicationFactory factory) : IClassFix
     [Fact]
     public async Task AssignVehicle_ShouldReturnConflict_WhenTagIsInactive()
     {
+        var adminClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Admin);
         var user = new User { Name = "Dana", Email = "dana@example.com", PasswordHash = "hash", Role = UserRole.Admin };
         await SeedUserAsync(user);
 
@@ -261,7 +316,7 @@ public class TagControllerTests(CustomWebApplicationFactory factory) : IClassFix
         };
         await SeedTagAsync(seeded);
 
-        var response = await _client.PatchAsJsonAsync($"/api/tags/{seeded.TagId}/assign-vehicle", new AssignVehicleDto { VehicleId = vehicle.VehicleId });
+        var response = await adminClient.PatchAsJsonAsync($"/api/tags/{seeded.TagId}/assign-vehicle", new AssignVehicleDto { VehicleId = vehicle.VehicleId });
 
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
     }
@@ -269,6 +324,7 @@ public class TagControllerTests(CustomWebApplicationFactory factory) : IClassFix
     [Fact]
     public async Task AssignVehicle_ShouldReturnNotFound_WhenTagDoesNotExist()
     {
+        var adminClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Admin);
         var user = new User { Name = "Eva", Email = "eva@example.com", PasswordHash = "hash", Role = UserRole.Admin };
         await SeedUserAsync(user);
 
@@ -281,7 +337,7 @@ public class TagControllerTests(CustomWebApplicationFactory factory) : IClassFix
         };
         await SeedVehicleAsync(vehicle);
 
-        var response = await _client.PatchAsJsonAsync($"/api/tags/{Guid.NewGuid()}/assign-vehicle", new AssignVehicleDto { VehicleId = vehicle.VehicleId });
+        var response = await adminClient.PatchAsJsonAsync($"/api/tags/{Guid.NewGuid()}/assign-vehicle", new AssignVehicleDto { VehicleId = vehicle.VehicleId });
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -289,10 +345,11 @@ public class TagControllerTests(CustomWebApplicationFactory factory) : IClassFix
     [Fact]
     public async Task AssignVehicle_ShouldReturnNotFound_WhenVehicleDoesNotExist()
     {
+        var adminClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Admin);
         var seeded = new Tag { Status = Backend.Features.Tags.Enums.TagStatus.AVAILABLE, Epc = "EPC-011", Tid = "TID-011" };
         await SeedTagAsync(seeded);
 
-        var response = await _client.PatchAsJsonAsync($"/api/tags/{seeded.TagId}/assign-vehicle", new AssignVehicleDto { VehicleId = Guid.NewGuid() });
+        var response = await adminClient.PatchAsJsonAsync($"/api/tags/{seeded.TagId}/assign-vehicle", new AssignVehicleDto { VehicleId = Guid.NewGuid() });
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
