@@ -7,6 +7,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 
 using Backend.Database;
+using Backend.Database.Seeding;
 using Backend.Configuration;
 using Backend.Features.Tags;
 using Backend.Features.Auth;
@@ -102,6 +103,7 @@ builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IAccessesService, AccessesService>();
 builder.Services.AddScoped<IParkingPricesService, ParkingPricesService>();
+builder.Services.AddScoped<IAppSeeder, AppSeeder>();
 
 // Configure JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>()
@@ -143,6 +145,15 @@ if (!app.Environment.IsEnvironment("Testing") && !skipMigrations)
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         db.Database.Migrate();
     }
+}
+
+// Seed initial data
+var skipSeeding = string.Equals(Environment.GetEnvironmentVariable("SKIP_SEEDING"), "true", StringComparison.OrdinalIgnoreCase);
+if (!skipSeeding)
+{
+    using var scope = app.Services.CreateScope();
+    var seeder = scope.ServiceProvider.GetRequiredService<IAppSeeder>();
+    await seeder.SeedAsync();
 }
 
 // Configure the HTTP request pipeline
