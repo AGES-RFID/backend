@@ -7,6 +7,7 @@ using Backend.Features.Tags;
 using Backend.Features.Tags.Enums;
 using Backend.Features.Users;
 using Backend.Features.Vehicles;
+using Backend.Features.Settings;
 using Microsoft.Extensions.DependencyInjection;
 using tests.Setup;
 
@@ -246,5 +247,34 @@ public class DashboardControllerTests(CustomWebApplicationFactory factory)
         var response = await customerClient.GetAsync("/api/dashboard/metrics");
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetMetrics_WhenSettingsExist_ReturnsMaxOccupancy()
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        db.Settings.Add(new Settings { MaxOccupancy = 200 });
+        await db.SaveChangesAsync();
+
+        var adminClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Admin);
+        var response = await adminClient.GetAsync("/api/dashboard/metrics");
+        response.EnsureSuccessStatusCode();
+
+        var metrics = await response.Content.ReadFromJsonAsync<DashboardMetricsDto>(CustomWebApplicationFactory.JsonOptions);
+        Assert.NotNull(metrics);
+        Assert.Equal(200, metrics.MaxOccupancy);
+    }
+
+    [Fact]
+    public async Task GetMetrics_WhenNoSettings_ReturnsZeroMaxOccupancy()
+    {
+        var adminClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Admin);
+        var response = await adminClient.GetAsync("/api/dashboard/metrics");
+        response.EnsureSuccessStatusCode();
+
+        var metrics = await response.Content.ReadFromJsonAsync<DashboardMetricsDto>(CustomWebApplicationFactory.JsonOptions);
+        Assert.NotNull(metrics);
+        Assert.Equal(0, metrics.MaxOccupancy);
     }
 }

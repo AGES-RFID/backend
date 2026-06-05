@@ -2,6 +2,7 @@ using Backend.Database;
 using Backend.Features.Accesses;
 using Backend.Features.Dashboard;
 using Backend.Features.Tags;
+using Backend.Features.Settings;
 using Microsoft.EntityFrameworkCore;
 
 namespace Backend.Tests.Unit.Features.Dashboard;
@@ -122,5 +123,27 @@ public class DashboardServiceTests
         var result = await service.GetMetricsAsync();
 
         Assert.Null(result.PeakEntryTime);
+    }
+
+    [Fact]
+    public async Task GetMetricsAsync_WhenSettingsExist_ReturnsMaxOccupancy()
+    {
+        var db = CreateInMemoryDb();
+        db.Settings.Add(new Settings { MaxOccupancy = 150 });
+        await db.SaveChangesAsync();
+
+        var result = await new DashboardService(db).GetMetricsAsync();
+
+        Assert.Equal(150, result.MaxOccupancy);
+    }
+
+    [Fact]
+    public async Task GetMetricsAsync_WhenNoSettings_ReturnsZeroMaxOccupancy()
+    {
+        var db = CreateInMemoryDb();
+
+        var result = await new DashboardService(db).GetMetricsAsync();
+
+        Assert.Equal(0, result.MaxOccupancy);
     }
 }

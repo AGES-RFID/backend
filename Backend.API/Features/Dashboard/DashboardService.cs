@@ -1,6 +1,7 @@
 using Backend.Database;
 using Backend.Features.Accesses;
 using Backend.Features.Vehicles;
+using Backend.Features.Settings;
 using Microsoft.EntityFrameworkCore;
 
 namespace Backend.Features.Dashboard;
@@ -55,13 +56,19 @@ public class DashboardService(AppDbContext db) : IDashboardService
             .Select(g => g.Key)
             .FirstOrDefaultAsync();
 
+        var maxOccupancy = await _db.Settings
+            .AsNoTracking()
+            .Select(s => s.MaxOccupancy)
+            .FirstOrDefaultAsync();    
+
         return new DashboardMetricsDto
         {
             EntriesLastHour = entriesLastHour,
             ExitsLastHour = exitsLastHour,
             PeakEntryTime = peakEntryTime == 0 && entriesLastHour == 0
                 ? null
-                : $"{peakEntryTime:D2}:00"
+                : $"{peakEntryTime:D2}:00",
+            MaxOccupancy = maxOccupancy
         };
     }
 }

@@ -148,4 +148,26 @@ public class DashboardControllerTests
         Assert.Equal(0, dto.ExitsLastHour);
         Assert.Null(dto.PeakEntryTime);
     }
+
+    [Fact]
+    public async Task GetMetrics_WhenServiceReturnsMaxOccupancy_ReturnsCorrectValue()
+    {
+        var expected = new DashboardMetricsDto
+        {
+            EntriesLastHour = 0,
+            ExitsLastHour = 0,
+            PeakEntryTime = null,
+            MaxOccupancy = 150
+        };
+
+        var service = Substitute.For<IDashboardService>();
+        service.GetMetricsAsync().Returns(expected);
+
+        var controller = new DashboardController(service);
+        var result = await controller.GetMetrics();
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var dto = Assert.IsType<DashboardMetricsDto>(ok.Value);
+        Assert.Equal(150, dto.MaxOccupancy);
+    }
 }
