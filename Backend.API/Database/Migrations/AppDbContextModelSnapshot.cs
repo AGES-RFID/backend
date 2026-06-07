@@ -126,14 +126,22 @@ namespace Backend.Database.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("settings_id");
 
-                    b.Property<int>("MaxOccupancy")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(100)
-                        .HasColumnName("max_occupancy");
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("value");
 
                     b.HasKey("SettingsId")
                         .HasName("pk_settings");
+
+                    b.HasIndex("Name")
+                        .IsUnique()
+                        .HasDatabaseName("ix_settings_name");
 
                     b.ToTable("settings", (string)null);
                 });

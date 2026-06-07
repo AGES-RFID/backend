@@ -129,7 +129,7 @@ public class DashboardServiceTests
     public async Task GetMetricsAsync_WhenSettingsExist_ReturnsMaxOccupancy()
     {
         var db = CreateInMemoryDb();
-        db.Settings.Add(new Settings { MaxOccupancy = 150 });
+        db.Settings.Add(new Settings { Name = "max_occupancy", Value = "150" });
         await db.SaveChangesAsync();
 
         var result = await new DashboardService(db).GetMetricsAsync();

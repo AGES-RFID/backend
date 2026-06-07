@@ -254,7 +254,7 @@ public class DashboardControllerTests(CustomWebApplicationFactory factory)
     {
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        db.Settings.Add(new Settings { MaxOccupancy = 200 });
+        db.Settings.Add(new Settings { Name = "max_occupancy", Value = "200" });
         await db.SaveChangesAsync();
 
         var adminClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Admin);
