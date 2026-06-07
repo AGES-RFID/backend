@@ -3,5 +3,6 @@ namespace Backend.Features.Settings;
 public class Settings
 {
     public Guid SettingsId { get; set; } = Guid.NewGuid();
-    public int MaxOccupancy { get; set; } = 100;
+    public required string Name { get; set; }
+    public required string Value { get; set; }
 }

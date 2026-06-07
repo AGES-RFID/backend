@@ -56,10 +56,13 @@ public class DashboardService(AppDbContext db) : IDashboardService
             .Select(g => g.Key)
             .FirstOrDefaultAsync();
 
-        var maxOccupancy = await _db.Settings
+        var maxOccupancySetting = await _db.Settings
             .AsNoTracking()
-            .Select(s => s.MaxOccupancy)
-            .FirstOrDefaultAsync();    
+            .FirstOrDefaultAsync(s => s.Name == "max_occupancy");
+
+        var maxOccupancy = maxOccupancySetting != null && int.TryParse(maxOccupancySetting.Value, out var parsed)
+            ? parsed
+            : 0;  
 
         return new DashboardMetricsDto
         {
