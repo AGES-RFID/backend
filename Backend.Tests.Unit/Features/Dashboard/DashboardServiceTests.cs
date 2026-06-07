@@ -17,6 +17,9 @@ public class DashboardServiceTests
         return new AppDbContext(options);
     }
 
+    private static DashboardService CreateService(AppDbContext db)
+        => new(db, new SettingsService(db));
+
     private static Access CreateAccess(Guid tagId, AccessType type, DateTime timestamp) => new()
     {
         TagId = tagId,
@@ -29,7 +32,7 @@ public class DashboardServiceTests
     public async Task GetMetricsAsync_WhenNoAccesses_ReturnsZerosAndNullPeakTime()
     {
         var db = CreateInMemoryDb();
-        var service = new DashboardService(db);
+        var service = CreateService(db);
 
         var result = await service.GetMetricsAsync();
 
@@ -49,7 +52,7 @@ public class DashboardServiceTests
         db.Accesses.Add(CreateAccess(Guid.NewGuid(), AccessType.Entry, now.AddHours(-2)));
         await db.SaveChangesAsync();
 
-        var service = new DashboardService(db);
+        var service = CreateService(db);
         var result = await service.GetMetricsAsync();
 
         Assert.Equal(2, result.EntriesLastHour);
@@ -66,7 +69,7 @@ public class DashboardServiceTests
         db.Accesses.Add(CreateAccess(Guid.NewGuid(), AccessType.Exit, now.AddHours(-3)));
         await db.SaveChangesAsync();
 
-        var service = new DashboardService(db);
+        var service = CreateService(db);
         var result = await service.GetMetricsAsync();
 
         Assert.Equal(2, result.ExitsLastHour);
@@ -85,7 +88,7 @@ public class DashboardServiceTests
         db.Accesses.Add(CreateAccess(Guid.NewGuid(), AccessType.Entry, now.AddMinutes(-5)));
         await db.SaveChangesAsync();
 
-        var service = new DashboardService(db);
+        var service = CreateService(db);
         var result = await service.GetMetricsAsync();
 
         Assert.NotNull(result.PeakEntryTime);
@@ -102,7 +105,7 @@ public class DashboardServiceTests
         db.Accesses.Add(CreateAccess(Guid.NewGuid(), AccessType.Exit, now.AddMinutes(-20)));
         await db.SaveChangesAsync();
 
-        var service = new DashboardService(db);
+        var service = CreateService(db);
         var result = await service.GetMetricsAsync();
 
         Assert.Equal(0, result.EntriesLastHour);
@@ -119,7 +122,7 @@ public class DashboardServiceTests
         db.Accesses.Add(CreateAccess(Guid.NewGuid(), AccessType.Entry, now.AddHours(-30)));
         await db.SaveChangesAsync();
 
-        var service = new DashboardService(db);
+        var service = CreateService(db);
         var result = await service.GetMetricsAsync();
 
         Assert.Null(result.PeakEntryTime);
@@ -132,18 +135,18 @@ public class DashboardServiceTests
         db.Settings.Add(new Settings { Name = "max_occupancy", Value = "150" });
         await db.SaveChangesAsync();
 
-        var result = await new DashboardService(db).GetMetricsAsync();
+        var result = await CreateService(db).GetMetricsAsync();
 
         Assert.Equal(150, result.MaxOccupancy);
     }
 
     [Fact]
-    public async Task GetMetricsAsync_WhenNoSettings_ReturnsZeroMaxOccupancy()
+    public async Task GetMetricsAsync_WhenNoSettings_ReturnsDefaultMaxOccupancy()
     {
         var db = CreateInMemoryDb();
 
-        var result = await new DashboardService(db).GetMetricsAsync();
+        var result = await CreateService(db).GetMetricsAsync();
 
-        Assert.Equal(0, result.MaxOccupancy);
+        Assert.Equal(100, result.MaxOccupancy);
     }
 }

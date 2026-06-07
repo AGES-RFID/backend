@@ -267,7 +267,7 @@ public class DashboardControllerTests(CustomWebApplicationFactory factory)
     }
 
     [Fact]
-    public async Task GetMetrics_WhenNoSettings_ReturnsZeroMaxOccupancy()
+    public async Task GetMetrics_WhenNoSettings_ReturnsDefaultMaxOccupancy()
     {
         var adminClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Admin);
         var response = await adminClient.GetAsync("/api/dashboard/metrics");
@@ -275,6 +275,6 @@ public class DashboardControllerTests(CustomWebApplicationFactory factory)
 
         var metrics = await response.Content.ReadFromJsonAsync<DashboardMetricsDto>(CustomWebApplicationFactory.JsonOptions);
         Assert.NotNull(metrics);
-        Assert.Equal(0, metrics.MaxOccupancy);
+        Assert.Equal(100, metrics.MaxOccupancy);
     }
 }
