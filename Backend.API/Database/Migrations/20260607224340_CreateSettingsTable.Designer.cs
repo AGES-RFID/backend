@@ -15,8 +15,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Backend.Database.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260607181859_AddSettingsTable")]
-    partial class AddSettingsTable
+    [Migration("20260607224340_CreateSettingsTable")]
+    partial class CreateSettingsTable
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
