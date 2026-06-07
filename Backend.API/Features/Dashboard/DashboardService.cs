@@ -12,9 +12,10 @@ public interface IDashboardService
     Task<DashboardMetricsDto> GetMetricsAsync();
 }
 
-public class DashboardService(AppDbContext db) : IDashboardService
+public class DashboardService(AppDbContext db, ISettingsService settingsService) : IDashboardService
 {
     private readonly AppDbContext _db = db;
+    private readonly ISettingsService _settingsService = settingsService;
 
     public async Task<OccupancyDto> GetOccupancyAsync()
     {
@@ -56,13 +57,7 @@ public class DashboardService(AppDbContext db) : IDashboardService
             .Select(g => g.Key)
             .FirstOrDefaultAsync();
 
-        var maxOccupancySetting = await _db.Settings
-            .AsNoTracking()
-            .FirstOrDefaultAsync(s => s.Name == "max_occupancy");
-
-        var maxOccupancy = maxOccupancySetting != null && int.TryParse(maxOccupancySetting.Value, out var parsed)
-            ? parsed
-            : 0;  
+        var maxOccupancy = await _settingsService.GetAsync("max_occupancy", 100);
 
         return new DashboardMetricsDto
         {
