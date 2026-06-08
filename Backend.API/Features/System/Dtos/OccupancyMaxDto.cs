@@ -1,6 +1,6 @@
 namespace Backend.Features.SystemConfig;
 
-public class OccupancyLimitDto
+public class OccupancyMaxDto
 {
     public int MaxOccupancy { get; set; }
 }
