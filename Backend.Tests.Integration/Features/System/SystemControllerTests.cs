@@ -8,6 +8,8 @@ namespace tests.Features.SystemConfigTests;
 public class SystemControllerTests(CustomWebApplicationFactory factory)
     : IClassFixture<CustomWebApplicationFactory>, IAsyncLifetime
 {
+    private readonly HttpClient _client = factory.CreateClient();
+
     public async Task InitializeAsync() => await factory.ResetDatabaseAsync();
     public Task DisposeAsync() => Task.CompletedTask;
 
