@@ -7,9 +7,11 @@ namespace Backend.Tests.Unit.Features.Dashboard;
 
 public class DashboardControllerTests
 {
-    private static OccupancyDto MakeOccupancyDto(int count = 0) => new()
+    private static OccupancyDto MakeOccupancyDto(int count = 0, int maxOccupancy = 100, double percentage = 0) => new()
     {
         CurrentOccupancy = count,
+        MaxOccupancy = maxOccupancy,
+        OccupancyPercentage = percentage,
         Vehicles = []
     };
 

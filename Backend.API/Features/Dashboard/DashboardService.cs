@@ -30,10 +30,16 @@ public class DashboardService(AppDbContext db, ISettingsService settingsService)
             .ToListAsync();
 
         var vehicleDtos = vehicles.Select(VehicleDto.FromModel).ToList();
+        var maxOccupancy = await _settingsService.GetAsync("max_occupancy", 100);
+        var occupancyPercentage = maxOccupancy == 0
+            ? 0.0
+            : Math.Round((double)vehicleDtos.Count / maxOccupancy * 100, 1);
 
         return new OccupancyDto
         {
             CurrentOccupancy = vehicleDtos.Count,
+            MaxOccupancy = maxOccupancy,
+            OccupancyPercentage = occupancyPercentage,
             Vehicles = vehicleDtos
         };
     }
