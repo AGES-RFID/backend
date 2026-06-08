@@ -1,6 +1,7 @@
 using Backend.Database;
 using Backend.Features.Accesses;
 using Backend.Features.Vehicles;
+using Backend.Features.Settings;
 using Microsoft.EntityFrameworkCore;
 
 namespace Backend.Features.Dashboard;
@@ -11,9 +12,10 @@ public interface IDashboardService
     Task<DashboardMetricsDto> GetMetricsAsync();
 }
 
-public class DashboardService(AppDbContext db) : IDashboardService
+public class DashboardService(AppDbContext db, ISettingsService settingsService) : IDashboardService
 {
     private readonly AppDbContext _db = db;
+    private readonly ISettingsService _settingsService = settingsService;
 
     public async Task<OccupancyDto> GetOccupancyAsync()
     {
@@ -55,13 +57,16 @@ public class DashboardService(AppDbContext db) : IDashboardService
             .Select(g => g.Key)
             .FirstOrDefaultAsync();
 
+        var maxOccupancy = await _settingsService.GetAsync("max_occupancy", 100);
+
         return new DashboardMetricsDto
         {
             EntriesLastHour = entriesLastHour,
             ExitsLastHour = exitsLastHour,
             PeakEntryTime = peakEntryTime == 0 && entriesLastHour == 0
                 ? null
-                : $"{peakEntryTime:D2}:00"
+                : $"{peakEntryTime:D2}:00",
+            MaxOccupancy = maxOccupancy
         };
     }
 }

@@ -1,5 +1,6 @@
 using Backend.Features.Accesses;
 using Backend.Features.ParkingPrices;
+using Backend.Features.Settings;
 using Backend.Features.Tags;
 using Backend.Features.Tags.Enums;
 using Backend.Features.Transactions;
@@ -141,6 +142,15 @@ public class AppSeeder(AppDbContext db, ILogger<AppSeeder> logger) : IAppSeeder
         _db.Transactions.AddRange(depositTransaction, withdrawalTransaction);
         await _db.SaveChangesAsync(cancellationToken);
 
+        var maxOccupancySetting = new Settings
+        {
+            Name = "max_occupancy",
+            Value = "100"
+        };
+
+        _db.Settings.Add(maxOccupancySetting);
+        await _db.SaveChangesAsync(cancellationToken);
+
         await transaction.CommitAsync(cancellationToken);
 
         const string successMessage = "Seeding completed successfully.";
@@ -154,7 +164,8 @@ public class AppSeeder(AppDbContext db, ILogger<AppSeeder> logger) : IAppSeeder
             VehiclesSeeded = 2,
             ParkingPricesSeeded = 1,
             AccessesSeeded = 2,
-            TransactionsSeeded = 2
+            TransactionsSeeded = 2,
+            SettingsSeeded = 1,
         };
     }
 

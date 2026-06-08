@@ -11,6 +11,7 @@ public sealed class SeedExecutionResult
     public int ParkingPricesSeeded { get; init; }
     public int TransactionsSeeded { get; init; }
     public int AccessesSeeded { get; init; }
+    public int SettingsSeeded { get; init; }
 
     public static SeedExecutionResult SkippedExecution(string message) => new()
     {
