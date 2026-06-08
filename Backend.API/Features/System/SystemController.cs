@@ -13,13 +13,13 @@ public class SystemController(ISettingsService settingsService) : ControllerBase
     private const int DefaultMaxOccupancy = 100;
     private readonly ISettingsService _settingsService = settingsService;
 
-    [HttpGet("occupancy-max")]
-    public async Task<ActionResult<OccupancyMaxDto>> GetOccupancyMax()
+    [HttpGet("max-occupancy")]
+    public async Task<ActionResult<MaxOccupancyDto>> GetMaxOccupancy()
     {
         try
         {
             var maxOccupancy = await _settingsService.GetAsync(MaxOccupancyKey, DefaultMaxOccupancy);
-            return Ok(new OccupancyMaxDto { MaxOccupancy = maxOccupancy });
+            return Ok(new MaxOccupancyDto { MaxOccupancy = maxOccupancy });
         }
         catch (Exception)
         {
@@ -27,13 +27,13 @@ public class SystemController(ISettingsService settingsService) : ControllerBase
         }
     }
 
-    [HttpPut("occupancy-max")]
-    public async Task<ActionResult<OccupancyMaxDto>> UpdateOccupancyMax(UpdateOccupancyMaxDto dto)
+    [HttpPut("max-occupancy")]
+    public async Task<ActionResult<MaxOccupancyDto>> UpdateMaxOccupancy(UpdateMaxOccupancyDto dto)
     {
         try
         {
             await _settingsService.SetAsync(MaxOccupancyKey, dto.MaxOccupancy.ToString());
-            return Ok(new OccupancyMaxDto { MaxOccupancy = dto.MaxOccupancy });
+            return Ok(new MaxOccupancyDto { MaxOccupancy = dto.MaxOccupancy });
         }
         catch (Exception)
         {
