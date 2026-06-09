@@ -9,6 +9,7 @@ public interface IAccessesService
 {
     Task<IEnumerable<AccessDto>> GetAccessesAsync(AccessType? accessType = null);
     Task<AccessDto> RegisterAccessAsync(CreateAccessDto dto);
+    Task<TimeseriesResponseDto> GetTimeSeriesAsync();
 }
 
 public class AccessesService(AppDbContext db) : IAccessesService
@@ -81,6 +82,72 @@ public class AccessesService(AppDbContext db) : IAccessesService
         return AccessDto.FromModel(access);
     }
 
+    public async Task<TimeseriesResponseDto> GetTimeSeriesAsync()
+    {
+        var to = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, DateTime.UtcNow.Day, DateTime.UtcNow.Hour, 0, 0, DateTimeKind.Utc);
+        var from = to.AddHours(-24);
+
+        var accesses = await _db.Accesses
+            .AsNoTracking()
+            .Where(a => a.Timestamp >= from && a.Timestamp < to)
+            .Select(a => new { a.Timestamp, a.Type })
+            .ToListAsync();
+
+        var entryPoints = new List<TimeSeriesPointDto>();
+        var exitPoints = new List<TimeSeriesPointDto>();
+
+        for (int i = 23; i >= 0; i--)
+        {
+            var time = to.AddHours(-i - 1);
+            var nextTime = time.AddHours(1);
+
+            int entryCount = 0;
+            int exitCount = 0;
+
+            foreach (var a in accesses)
+            {
+                foreach (var b in accesses)
+                {
+                    if (a.Equals(b) && a.Timestamp >= time && a.Timestamp < nextTime)
+                    {
+                        if (a.Type == AccessType.Entry) entryCount++;
+                        if (a.Type == AccessType.Exit) exitCount++;
+                    }
+                }
+            }
+
+            entryPoints.Add(new TimeSeriesPointDto
+            {
+                Timestamp = time,
+                Count = entryCount
+            });
+
+            exitPoints.Add(new TimeSeriesPointDto
+            {
+                Timestamp = time,
+                Count = exitCount
+            });
+        }
+
+        return new TimeseriesResponseDto
+        {
+            From = from,
+            To = to,
+            Series = new List<TimeSeriesDto>
+            {
+                new TimeSeriesDto
+                {
+                    Key = "entries",
+                    Points = entryPoints
+                },
+                new TimeSeriesDto
+                {
+                    Key = "exits",
+                    Points = exitPoints
+                }
+            }
+        };
+    }
     private async Task<Tag> GetActiveTagAsync(string tid, string epc)
     {
         var tag = await _db.Tags
