@@ -277,4 +277,53 @@ public class DashboardControllerTests(CustomWebApplicationFactory factory)
         Assert.NotNull(metrics);
         Assert.Equal(100, metrics.MaxOccupancy);
     }
+
+    [Fact]
+    public async Task GetOccupancy_WhenSettingsExist_ReturnsMaxOccupancy()
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        db.Settings.Add(new Settings { Name = "max_occupancy", Value = "150" });
+        await db.SaveChangesAsync();
+
+        var adminClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Admin);
+        var response = await adminClient.GetAsync("/api/dashboard/occupancy");
+        response.EnsureSuccessStatusCode();
+
+        var body = await response.Content.ReadFromJsonAsync<OccupancyDto>(CustomWebApplicationFactory.JsonOptions);
+        Assert.NotNull(body);
+        Assert.Equal(150, body.MaxOccupancy);
+    }
+
+    [Fact]
+    public async Task GetOccupancy_WhenNoSettings_ReturnsDefaultMaxOccupancy()
+    {
+        var adminClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Admin);
+        var response = await adminClient.GetAsync("/api/dashboard/occupancy");
+        response.EnsureSuccessStatusCode();
+
+        var body = await response.Content.ReadFromJsonAsync<OccupancyDto>(CustomWebApplicationFactory.JsonOptions);
+        Assert.NotNull(body);
+        Assert.Equal(100, body.MaxOccupancy);
+    }
+
+    [Fact]
+    public async Task GetOccupancy_WhenOneVehicleInsideAndMaxIs100_ReturnsOnePercentOccupancy()
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        db.Settings.Add(new Settings { Name = "max_occupancy", Value = "100" });
+        await db.SaveChangesAsync();
+
+        var adminClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Admin);
+        var (_, _, tag) = await SeedVehicleWithTagAsync("PCT-001");
+        await SeedAccessAsync(tag.TagId, AccessType.Entry, DateTime.UtcNow);
+
+        var response = await adminClient.GetAsync("/api/dashboard/occupancy");
+        response.EnsureSuccessStatusCode();
+
+        var body = await response.Content.ReadFromJsonAsync<OccupancyDto>(CustomWebApplicationFactory.JsonOptions);
+        Assert.NotNull(body);
+        Assert.Equal(1.0, body.OccupancyPercentage);
+    }
 }
