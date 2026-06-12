@@ -18,7 +18,7 @@ public class GatewayClient(HttpClient httpClient) : IGatewayClient
 {
     public async Task<List<AntennaDto>> GetAntennasAsync()
     {
-        var response = await httpClient.GetAsync("antennas");
+        using var response = await httpClient.GetAsync("antennas");
         if (!response.IsSuccessStatusCode)
             throw new GatewayException((int)response.StatusCode);
         return await response.Content.ReadFromJsonAsync<List<AntennaDto>>() ?? [];
@@ -26,7 +26,7 @@ public class GatewayClient(HttpClient httpClient) : IGatewayClient
 
     public async Task<AntennaDto> GetAntennaAsync(Guid id)
     {
-        var response = await httpClient.GetAsync($"antennas/{id}");
+        using var response = await httpClient.GetAsync($"antennas/{id}");
         if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
             throw new KeyNotFoundException($"Antenna {id} not found");
         if (!response.IsSuccessStatusCode)
@@ -37,7 +37,7 @@ public class GatewayClient(HttpClient httpClient) : IGatewayClient
 
     public async Task<AntennaDto> UpdateAntennaAsync(Guid id, UpdateAntennaDto dto)
     {
-        var response = await httpClient.PutAsJsonAsync($"antennas/{id}", dto);
+        using var response = await httpClient.PutAsJsonAsync($"antennas/{id}", dto);
         if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
             throw new KeyNotFoundException($"Antenna {id} not found");
         if (!response.IsSuccessStatusCode)
