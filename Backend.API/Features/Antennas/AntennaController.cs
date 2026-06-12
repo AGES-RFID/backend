@@ -53,6 +53,9 @@ public class AntennaController(IAntennaService antennaService) : ControllerBase
     [HttpPut("{id}")]
     public async Task<ActionResult<AntennaDto>> UpdateAntenna(Guid id, UpdateAntennaDto dto)
     {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
         try
         {
             var antenna = await _antennaService.UpdateAntennaAsync(id, dto);
