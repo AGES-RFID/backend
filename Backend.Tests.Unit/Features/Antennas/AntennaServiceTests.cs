@@ -121,4 +121,64 @@ public class AntennaServiceTests
         Assert.Equal(expected, result);
         await client.Received(1).UpdateAntennaAsync(id, dto);
     }
+
+    [Fact]
+    public async Task UpdateAntennaAsync_WhenSensibilityIs0_DelegatesToGatewayClient()
+    {
+        var id = Guid.NewGuid();
+        var dto = new UpdateAntennaDto { Sensibility = 0 };
+        var expected = new AntennaDto { Id = id, Number = 1, Status = "Off" };
+        var client = Substitute.For<IGatewayClient>();
+        client.UpdateAntennaAsync(id, Arg.Any<UpdateAntennaDto>()).Returns(expected);
+        var service = new AntennaService(client);
+
+        await service.UpdateAntennaAsync(id, dto);
+
+        await client.Received(1).UpdateAntennaAsync(id, Arg.Any<UpdateAntennaDto>());
+    }
+
+    [Fact]
+    public async Task UpdateAntennaAsync_WhenSensibilityIs100_DelegatesToGatewayClient()
+    {
+        var id = Guid.NewGuid();
+        var dto = new UpdateAntennaDto { Sensibility = 100 };
+        var expected = new AntennaDto { Id = id, Number = 1, Status = "Off" };
+        var client = Substitute.For<IGatewayClient>();
+        client.UpdateAntennaAsync(id, Arg.Any<UpdateAntennaDto>()).Returns(expected);
+        var service = new AntennaService(client);
+
+        await service.UpdateAntennaAsync(id, dto);
+
+        await client.Received(1).UpdateAntennaAsync(id, Arg.Any<UpdateAntennaDto>());
+    }
+
+    [Fact]
+    public async Task UpdateAntennaAsync_WhenPowerIs0_DelegatesToGatewayClient()
+    {
+        var id = Guid.NewGuid();
+        var dto = new UpdateAntennaDto { Power = 0 };
+        var expected = new AntennaDto { Id = id, Number = 1, Status = "Off" };
+        var client = Substitute.For<IGatewayClient>();
+        client.UpdateAntennaAsync(id, Arg.Any<UpdateAntennaDto>()).Returns(expected);
+        var service = new AntennaService(client);
+
+        await service.UpdateAntennaAsync(id, dto);
+
+        await client.Received(1).UpdateAntennaAsync(id, Arg.Any<UpdateAntennaDto>());
+    }
+
+    [Fact]
+    public async Task UpdateAntennaAsync_WhenPowerIs100_DelegatesToGatewayClient()
+    {
+        var id = Guid.NewGuid();
+        var dto = new UpdateAntennaDto { Power = 100 };
+        var expected = new AntennaDto { Id = id, Number = 1, Status = "Off" };
+        var client = Substitute.For<IGatewayClient>();
+        client.UpdateAntennaAsync(id, Arg.Any<UpdateAntennaDto>()).Returns(expected);
+        var service = new AntennaService(client);
+
+        await service.UpdateAntennaAsync(id, dto);
+
+        await client.Received(1).UpdateAntennaAsync(id, Arg.Any<UpdateAntennaDto>());
+    }
 }
