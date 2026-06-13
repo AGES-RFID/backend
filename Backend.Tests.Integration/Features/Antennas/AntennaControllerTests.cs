@@ -15,9 +15,9 @@ public class AntennaControllerTests : IClassFixture<CustomWebApplicationFactory>
     private readonly CustomWebApplicationFactory _factory;
     private readonly IGatewayClient _gatewayClient = Substitute.For<IGatewayClient>();
 
-    #pragma warning disable CA2213
+#pragma warning disable CA2213
     private readonly HttpClient _warmupClient;
-    #pragma warning restore CA2213
+#pragma warning restore CA2213
 
     public AntennaControllerTests(CustomWebApplicationFactory factory)
     {
