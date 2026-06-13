@@ -263,4 +263,35 @@ public class AccessesControllerTests(CustomWebApplicationFactory factory) : ICla
         var row = Assert.Single(result);
         Assert.Equal(25m, row.Value);
     }
+
+    [Fact]
+    public async Task GetTimeseries_WhenAdmin_ReturnsTimeseriesData()
+    {
+        var adminClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Admin);
+
+        var (tagId, _, _) = await SeedVehicleAndTagAsync();
+
+        await SeedAccessAsync(tagId, AccessType.Entry, DateTime.UtcNow.AddHours(-2));
+        await SeedAccessAsync(tagId, AccessType.Exit, DateTime.UtcNow.AddHours(-1));
+
+        var response = await adminClient.GetAsync("/api/accesses/timeseries");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var result = await response.Content.ReadFromJsonAsync<TimeseriesResponseDto>(CustomWebApplicationFactory.JsonOptions);
+        Assert.NotNull(result);
+        Assert.Equal(2, result.Series.Count());
+
+        var entries = result.Series.First(s => s.Key == "entries");
+        var exits = result.Series.First(s => s.Key == "exits");
+
+        Assert.Equal(24, entries.Points.Count());
+        Assert.Equal(24, exits.Points.Count());
+
+        var entryCount = entries.Points.Sum(p => p.Count);
+        var exitCount = exits.Points.Sum(p => p.Count);
+
+        Assert.True(entryCount >= 1, "Should have at least 1 entry");
+        Assert.True(exitCount >= 1, "Should have at least 1 exit");
+    }
 }

@@ -69,4 +69,58 @@ public class AccessesControllerTests
 
         Assert.IsType<ConflictObjectResult>(result.Result);
     }
+
+    [Fact]
+    public async Task GetAccesses_ReturnsOkWithAccesses()
+    {
+        var expected = new List<AccessDto>
+        {
+            new() { AccessId = Guid.NewGuid(), TagId = Guid.NewGuid(), Type = AccessType.Entry, Timestamp = DateTime.UtcNow }
+        };
+
+        var service = Substitute.For<IAccessesService>();
+        service.GetAccessesAsync(null).Returns(expected);
+
+        var controller = new AccessesController(service);
+
+        var result = await controller.GetAccesses(null);
+
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        Assert.Equal(200, okResult.StatusCode);
+        Assert.Equal(expected, okResult.Value);
+    }
+
+    [Fact]
+    public async Task GetAccesses_WithInvalidType_ReturnsBadRequest()
+    {
+        var service = Substitute.For<IAccessesService>();
+        var controller = new AccessesController(service);
+
+        var result = await controller.GetAccesses("invalid_type");
+
+        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
+        Assert.Equal(400, badRequestResult.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetTimeseries_ReturnsOkWithData()
+    {
+        var expected = new TimeseriesResponseDto
+        {
+            From = DateTime.UtcNow.AddHours(-24),
+            To = DateTime.UtcNow,
+            Series = []
+        };
+
+        var service = Substitute.For<IAccessesService>();
+        service.GetTimeSeriesAsync().Returns(expected);
+
+        var controller = new AccessesController(service);
+
+        var result = await controller.GetTimeseries();
+
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        Assert.Equal(200, okResult.StatusCode);
+        Assert.Equal(expected, okResult.Value);
+    }
 }
