@@ -6,12 +6,16 @@ using Backend.Features.Vehicles;
 using Backend.Features.Accesses;
 using Backend.Features.ParkingPrices;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Backend.Features.Settings;
 
 namespace Backend.Database;
 
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
+    private const string CreatedAtField = "CreatedAt";
+    private const string UpdatedAtField = "UpdatedAt";
+
     public DbSet<User> Users { get; set; }
     public DbSet<Vehicle> Vehicles { get; set; }
     public DbSet<Tag> Tags { get; set; }
@@ -39,31 +43,35 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         foreach (var entry in ChangeTracker.Entries())
         {
-            if (entry.State is not (EntityState.Added or EntityState.Modified))
-                continue;
+            if (!IsValidEntry(entry)) continue;
 
-            var createdAtProp = entry.Metadata.FindProperty("CreatedAt");
-            var updatedAtProp = entry.Metadata.FindProperty("UpdatedAt");
+            var createdAtProp = entry.Metadata.FindProperty(CreatedAtField);
+            var updatedAtProp = entry.Metadata.FindProperty(UpdatedAtField);
 
-            if (createdAtProp is null || updatedAtProp is null)
-                continue;
+            if (createdAtProp is null || updatedAtProp is null) continue;
+            if (createdAtProp.ClrType != typeof(DateTime) || updatedAtProp.ClrType != typeof(DateTime)) continue;
 
-            if (createdAtProp.ClrType != typeof(DateTime) || updatedAtProp.ClrType != typeof(DateTime))
-                continue;
+            ApplyTimestampsForEntry(entry, now);
+        }
+    }
 
-            if (entry.State == EntityState.Added)
-            {
-                var createdAtValue = (DateTime)entry.Property("CreatedAt").CurrentValue!;
-                if (createdAtValue == default)
-                    entry.Property("CreatedAt").CurrentValue = now;
+    private static bool IsValidEntry(EntityEntry entry)
+        => entry.State is (EntityState.Added or EntityState.Modified);
 
-                entry.Property("UpdatedAt").CurrentValue = now;
-            }
-            else
-            {
-                entry.Property("CreatedAt").IsModified = false;
-                entry.Property("UpdatedAt").CurrentValue = now;
-            }
+    private void ApplyTimestampsForEntry(EntityEntry entry, DateTime now)
+    {
+        if (entry.State == EntityState.Added)
+        {
+            var createdAtValue = (DateTime)entry.Property(CreatedAtField).CurrentValue!;
+            if (createdAtValue == default)
+                entry.Property(CreatedAtField).CurrentValue = now;
+
+            entry.Property(UpdatedAtField).CurrentValue = now;
+        }
+        else
+        {
+            entry.Property(CreatedAtField).IsModified = false;
+            entry.Property(UpdatedAtField).CurrentValue = now;
         }
     }
 
