@@ -20,6 +20,8 @@ public class AntennaController(IAntennaService antennaService) : ControllerBase
         }
         catch (GatewayException ex)
         {
+            if (ex.StatusCode >= 400 && ex.StatusCode < 500)
+                return UnprocessableEntity(new { error = $"Gateway rejected the request: {ex.StatusCode}" });
             return StatusCode(502, new { error = $"Gateway error: {ex.StatusCode}" });
         }
         catch (Exception)
@@ -42,6 +44,8 @@ public class AntennaController(IAntennaService antennaService) : ControllerBase
         }
         catch (GatewayException ex)
         {
+            if (ex.StatusCode >= 400 && ex.StatusCode < 500)
+                return UnprocessableEntity(new { error = $"Gateway rejected the request: {ex.StatusCode}" });
             return StatusCode(502, new { error = $"Gateway error: {ex.StatusCode}" });
         }
         catch (Exception)
@@ -71,6 +75,8 @@ public class AntennaController(IAntennaService antennaService) : ControllerBase
         }
         catch (GatewayException ex)
         {
+            if (ex.StatusCode >= 400 && ex.StatusCode < 500)
+                return UnprocessableEntity(new { error = $"Gateway rejected the request: {ex.StatusCode}" });
             return StatusCode(502, new { error = $"Gateway error: {ex.StatusCode}" });
         }
         catch (Exception)
