@@ -270,7 +270,7 @@ public class AccessesControllerTests(CustomWebApplicationFactory factory) : ICla
         var adminClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Admin);
 
         var (tagId, _, _) = await SeedVehicleAndTagAsync();
-        
+
         await SeedAccessAsync(tagId, AccessType.Entry, DateTime.UtcNow.AddHours(-2));
         await SeedAccessAsync(tagId, AccessType.Exit, DateTime.UtcNow.AddHours(-1));
 
@@ -281,7 +281,7 @@ public class AccessesControllerTests(CustomWebApplicationFactory factory) : ICla
         var result = await response.Content.ReadFromJsonAsync<TimeseriesResponseDto>(CustomWebApplicationFactory.JsonOptions);
         Assert.NotNull(result);
         Assert.Equal(2, result.Series.Count());
-        
+
         var entries = result.Series.First(s => s.Key == "entries");
         var exits = result.Series.First(s => s.Key == "exits");
 
@@ -290,7 +290,7 @@ public class AccessesControllerTests(CustomWebApplicationFactory factory) : ICla
 
         var entryCount = entries.Points.Sum(p => p.Count);
         var exitCount = exits.Points.Sum(p => p.Count);
-        
+
         Assert.True(entryCount >= 1, "Should have at least 1 entry");
         Assert.True(exitCount >= 1, "Should have at least 1 exit");
     }

@@ -102,13 +102,13 @@ public class AccessesService(AppDbContext db) : IAccessesService
             From = from,
             To = to,
             Series = [
-                new TimeSeriesDto { 
-                    Key = "entries", 
-                    Points = times.Select(t => new TimeSeriesPointDto { Timestamp = t, Count = lookup[t].Count(x => x == AccessType.Entry) }) 
+                new TimeSeriesDto {
+                    Key = "entries",
+                    Points = times.Select(t => new TimeSeriesPointDto { Timestamp = t, Count = lookup[t].Count(x => x == AccessType.Entry) })
                 },
-                new TimeSeriesDto { 
-                    Key = "exits", 
-                    Points = times.Select(t => new TimeSeriesPointDto { Timestamp = t, Count = lookup[t].Count(x => x == AccessType.Exit) }) 
+                new TimeSeriesDto {
+                    Key = "exits",
+                    Points = times.Select(t => new TimeSeriesPointDto { Timestamp = t, Count = lookup[t].Count(x => x == AccessType.Exit) })
                 }
             ]
         };
