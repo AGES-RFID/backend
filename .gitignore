@@ -27,6 +27,8 @@ artifacts/
 *.user
 *.userosscache
 *.sln.docstates
+.claude
+docs/superpowers/
 
 # Visual Studio Code
 .vscode/
