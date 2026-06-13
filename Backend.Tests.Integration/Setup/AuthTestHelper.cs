@@ -18,6 +18,8 @@ public static class AuthTestHelper
     public static HttpClient CreateAnonymousClient(CustomWebApplicationFactory factory)
         => factory.CreateClient();
 
+    public static string CreateTokenForUser(User user) => CreateJwtToken(user);
+
     public static async Task<HttpClient> CreateClientAsAsync(
         CustomWebApplicationFactory factory,
         UserRole role,

@@ -18,6 +18,7 @@ using Backend.Features.Transactions;
 using Backend.Features.Accesses;
 using Backend.Features.ParkingPrices;
 using Backend.Features.Settings;
+using Backend.Features.Antennas;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -105,6 +106,12 @@ builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IAccessesService, AccessesService>();
 builder.Services.AddScoped<IParkingPricesService, ParkingPricesService>();
 builder.Services.AddScoped<ISettingsService, SettingsService>();
+builder.Services.AddHttpClient<IGatewayClient, GatewayClient>(client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["Gateway:BaseUrl"]
+        ?? throw new InvalidOperationException("Gateway:BaseUrl is required"));
+});
+builder.Services.AddScoped<IAntennaService, AntennaService>();
 builder.Services.AddScoped<IAppSeeder, AppSeeder>();
 
 // Configure JWT Authentication
