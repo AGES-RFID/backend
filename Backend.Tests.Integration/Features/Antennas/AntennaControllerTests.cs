@@ -15,8 +15,6 @@ public class AntennaControllerTests : IClassFixture<CustomWebApplicationFactory>
     private readonly CustomWebApplicationFactory _factory;
     private readonly IGatewayClient _gatewayClient = Substitute.For<IGatewayClient>();
 
-    // Eagerly trigger ConfigureWebHost (which calls EnsureCreated) so that the DB schema
-    // exists before InitializeAsync calls ResetDatabaseAsync.
     #pragma warning disable CA2213
     private readonly HttpClient _warmupClient;
     #pragma warning restore CA2213
