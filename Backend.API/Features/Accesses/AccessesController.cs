@@ -19,6 +19,7 @@ public class AccessesController(IAccessesService accessService) : ControllerBase
         var accesses = await _accessService.GetAccessesAsync(parsedType);
         return Ok(accesses);
     }
+
     [HttpGet("timeseries")]
     [Authorize(Roles = "Admin")]
     public async Task<ActionResult<TimeseriesResponseDto>> GetTimeseries()
@@ -26,6 +27,7 @@ public class AccessesController(IAccessesService accessService) : ControllerBase
         var timeseries = await _accessService.GetTimeSeriesAsync();
         return Ok(timeseries);
     }
+
     [HttpPost]
     public async Task<ActionResult<AccessDto>> RegisterAccess([FromBody] CreateAccessDto dto)
     {
