@@ -9,6 +9,7 @@ public interface IAccessesService
 {
     Task<IEnumerable<AccessDto>> GetAccessesAsync(AccessType? accessType = null);
     Task<AccessDto> RegisterAccessAsync(CreateAccessDto dto);
+    Task<TimeseriesResponseDto> GetTimeSeriesAsync();
 }
 
 public class AccessesService(AppDbContext db) : IAccessesService
@@ -17,34 +18,30 @@ public class AccessesService(AppDbContext db) : IAccessesService
 
     public async Task<IEnumerable<AccessDto>> GetAccessesAsync(AccessType? accessType = null)
     {
-        var accessesQuery = _db.Accesses.AsNoTracking();
+        var query = _db.Accesses.AsNoTracking();
 
         if (accessType.HasValue)
         {
-            accessesQuery = accessesQuery.Where(a => a.Type == accessType.Value);
+            query = query.Where(a => a.Type == accessType.Value);
         }
 
-        var query =
-            from access in accessesQuery
-            join tag in _db.Tags.AsNoTracking() on access.TagId equals tag.TagId
-            join vehicle in _db.Vehicles.AsNoTracking() on tag.TagId equals vehicle.TagId
-            where !string.IsNullOrWhiteSpace(vehicle.Plate)
-            orderby access.Timestamp descending
-            select new AccessDto
+        return await query
+            .Where(a => a.Tag.Vehicle != null && !string.IsNullOrWhiteSpace(a.Tag.Vehicle.Plate))
+            .OrderByDescending(a => a.Timestamp)
+            .Select(a => new AccessDto
             {
-                AccessId = access.AccessId,
-                TagId = access.TagId,
-                Type = access.Type,
-                Timestamp = access.Timestamp,
-                Plate = vehicle.Plate,
+                AccessId = a.AccessId,
+                TagId = a.TagId,
+                Type = a.Type,
+                Timestamp = a.Timestamp,
+                Plate = a.Tag.Vehicle!.Plate,
                 Value = _db.Transactions
-                    .Where(t => t.AccessId == access.AccessId)
+                    .Where(t => t.AccessId == a.AccessId)
                     .OrderByDescending(t => t.CreatedAt)
                     .Select(t => (decimal?)t.Amount)
                     .FirstOrDefault()
-            };
-
-        return await query.ToListAsync();
+            })
+            .ToListAsync();
     }
 
     public async Task<AccessDto> RegisterAccessAsync(CreateAccessDto dto)
@@ -79,6 +76,42 @@ public class AccessesService(AppDbContext db) : IAccessesService
         await _db.SaveChangesAsync();
 
         return AccessDto.FromModel(access);
+    }
+
+    public async Task<TimeseriesResponseDto> GetTimeSeriesAsync()
+    {
+        var now = DateTime.UtcNow;
+        var to = new DateTime(now.Year, now.Month, now.Day, now.Hour, 0, 0, DateTimeKind.Utc);
+        var from = to.AddHours(-24);
+
+        var accesses = await _db.Accesses
+            .AsNoTracking()
+            .Where(a => a.Timestamp >= from && a.Timestamp < to)
+            .Select(a => new { a.Timestamp, a.Type })
+            .ToListAsync();
+
+        var lookup = accesses.ToLookup(
+            a => new DateTime(a.Timestamp.Year, a.Timestamp.Month, a.Timestamp.Day, a.Timestamp.Hour, 0, 0, DateTimeKind.Utc),
+            a => a.Type
+        );
+
+        var times = Enumerable.Range(0, 24).Select(i => from.AddHours(i)).ToArray();
+
+        return new TimeseriesResponseDto
+        {
+            From = from,
+            To = to,
+            Series = [
+                new TimeSeriesDto {
+                    Key = "entries",
+                    Points = times.Select(t => new TimeSeriesPointDto { Timestamp = t, Count = lookup[t].Count(x => x == AccessType.Entry) })
+                },
+                new TimeSeriesDto {
+                    Key = "exits",
+                    Points = times.Select(t => new TimeSeriesPointDto { Timestamp = t, Count = lookup[t].Count(x => x == AccessType.Exit) })
+                }
+            ]
+        };
     }
 
     private async Task<Tag> GetActiveTagAsync(string tid, string epc)
