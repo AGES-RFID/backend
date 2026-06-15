@@ -38,4 +38,18 @@ public class DashboardController(IDashboardService dashboardService) : Controlle
             return Problem();
         }
     }
+
+    [HttpGet]
+    public async Task<ActionResult<DashboardMetricsDto>> GetDashboard()
+    {
+        try
+        {
+            var dashboard = await _dashboardService.GetDashboardAsync();
+            return Ok(dashboard);
+        }
+        catch (Exception)
+        {
+            return Problem();
+        }
+    }
 }

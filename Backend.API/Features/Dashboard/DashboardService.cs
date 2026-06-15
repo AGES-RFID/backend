@@ -10,6 +10,7 @@ public interface IDashboardService
 {
     Task<OccupancyDto> GetOccupancyAsync();
     Task<DashboardMetricsDto> GetMetricsAsync();
+    Task<DashboardMetricsDto> GetDashboardAsync();
 }
 
 public class DashboardService(AppDbContext db, ISettingsService settingsService) : IDashboardService
@@ -76,5 +77,33 @@ public class DashboardService(AppDbContext db, ISettingsService settingsService)
             PeakHourEntries = peakEntry?.Count ?? 0,
             MaxOccupancy = maxOccupancy
         };
+    }
+
+    public async Task<DashboardMetricsDto> GetDashboardAsync()
+    {
+        var now = DateTime.UtcNow;
+        var twentyFourHoursAgo = now.AddHours(-24);
+
+        var metricsTask = GetMetricsAsync();
+        var occupancyTask = GetOccupancyAsync();
+        var accessesTask = _db.Accesses
+            .AsNoTracking()
+            .Where(a => a.Timestamp >= twentyFourHoursAgo)
+            .OrderByDescending(a => a.Timestamp)
+            .Select(a => AccessDto.FromModel(a))
+            .ToListAsync();
+
+        await Task.WhenAll(metricsTask, occupancyTask, accessesTask);
+
+        var metrics = await metricsTask;
+        var occupancy = await occupancyTask;
+        var accesses = await accessesTask;
+
+        metrics.CurrentOccupancy = occupancy.CurrentOccupancy;
+        metrics.MaxOccupancy = occupancy.MaxOccupancy;
+        metrics.Accesses = accesses;
+        metrics.UpdatedAt = now;
+
+        return metrics;
     }
 }
