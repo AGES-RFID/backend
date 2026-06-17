@@ -327,4 +327,80 @@ public class DashboardControllerTests(CustomWebApplicationFactory factory)
         Assert.NotNull(body);
         Assert.Equal(1.0, body.OccupancyPercentage);
     }
+
+    [Fact]
+    public async Task GetMetrics_WithEntriesAndExitsInLastHour_ReturnsCalculatedCounts()
+    {
+        var adminClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Admin);
+        var baseTime = DateTime.UtcNow;
+
+        var (_, _, entryTag1) = await SeedVehicleWithTagAsync("ENT-001");
+        var (_, _, entryTag2) = await SeedVehicleWithTagAsync("ENT-002");
+        var (_, _, exitTag) = await SeedVehicleWithTagAsync("EXT-001");
+
+        await SeedAccessAsync(entryTag1.TagId, AccessType.Entry, baseTime.AddMinutes(-45));
+        await SeedAccessAsync(entryTag2.TagId, AccessType.Entry, baseTime.AddMinutes(-20));
+        await SeedAccessAsync(exitTag.TagId, AccessType.Exit, baseTime.AddMinutes(-10));
+
+        await SeedAccessAsync(entryTag1.TagId, AccessType.Entry, baseTime.AddHours(-2));
+
+        var response = await adminClient.GetAsync("/api/dashboard/metrics");
+
+        response.EnsureSuccessStatusCode();
+        var metrics = await response.Content.ReadFromJsonAsync<DashboardMetricsDto>(CustomWebApplicationFactory.JsonOptions);
+
+        Assert.NotNull(metrics);
+        Assert.Equal(2, metrics.EntriesLastHour);
+        Assert.Equal(1, metrics.ExitsLastHour);
+    }
+
+    [Fact]
+    public async Task GetMetrics_WithAccessesInPast24Hours_ReturnsPeakEntryTime()
+    {
+        var adminClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Admin);
+        var now = DateTime.UtcNow;
+        var peakHour = now.AddHours(-5);
+        var nonPeakHour = now.AddHours(-10);
+
+        var (_, _, vehicleA) = await SeedVehicleWithTagAsync("PEAK-A");
+        var (_, _, vehicleB) = await SeedVehicleWithTagAsync("PEAK-B");
+
+        await SeedAccessAsync(vehicleA.TagId, AccessType.Entry, peakHour.AddMinutes(10));
+        await SeedAccessAsync(vehicleB.TagId, AccessType.Entry, peakHour.AddMinutes(20));
+        await SeedAccessAsync(vehicleA.TagId, AccessType.Entry, peakHour.AddMinutes(30));
+
+        await SeedAccessAsync(vehicleA.TagId, AccessType.Entry, nonPeakHour.AddMinutes(15));
+
+        var response = await adminClient.GetAsync("/api/dashboard/metrics");
+
+        response.EnsureSuccessStatusCode();
+        var metrics = await response.Content.ReadFromJsonAsync<DashboardMetricsDto>(CustomWebApplicationFactory.JsonOptions);
+
+        Assert.NotNull(metrics);
+        Assert.Equal($"{peakHour.Hour:D2}:00", metrics.PeakEntryTime);
+    }
+
+    [Fact]
+    public async Task GetDashboard_WhenCalled_ReturnsCombinedMetricsAndOccupancy()
+    {
+        var adminClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Admin);
+        var baseTime = DateTime.UtcNow;
+        var (_, _, vehicle) = await SeedVehicleWithTagAsync("AAA-999");
+
+        await SeedAccessAsync(vehicle.TagId, AccessType.Entry, baseTime.AddMinutes(-30));
+
+        var response = await adminClient.GetAsync("/api/dashboard");
+
+        response.EnsureSuccessStatusCode();
+        var metrics = await response.Content.ReadFromJsonAsync<DashboardMetricsDto>(CustomWebApplicationFactory.JsonOptions);
+
+        Assert.NotNull(metrics);
+        Assert.Equal(1, metrics.EntriesLastHour);
+        Assert.Equal(0, metrics.ExitsLastHour);
+        Assert.Equal(1, metrics.CurrentOccupancy);
+        Assert.NotNull(metrics.Accesses);
+        Assert.True(metrics.PeakHourEntries > 0);
+        Assert.True(metrics.UpdatedAt > DateTime.MinValue);
+        Assert.NotEmpty(metrics.Accesses);
+    }
 }
