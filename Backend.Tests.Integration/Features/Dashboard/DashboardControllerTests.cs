@@ -398,6 +398,10 @@ public class DashboardControllerTests(CustomWebApplicationFactory factory)
         Assert.Equal(1, metrics.EntriesLastHour);
         Assert.Equal(0, metrics.ExitsLastHour);
         Assert.Equal(1, metrics.CurrentOccupancy);
+        Assert.Equal(100, metrics.MaxOccupancy);
+        Assert.Equal(1, metrics.PeakEntryHour);
+        Assert.Equal($"{baseTime.AddMinutes(-30).Hour:D2}:00", metrics.PeakEntryTime);
+        Assert.True(metrics.UpdatedAt > DateTime.MinValue);
         Assert.NotNull(metrics.Accesses);
         Assert.True(metrics.PeakHourEntries > 0);
         Assert.True(metrics.UpdatedAt > DateTime.MinValue);

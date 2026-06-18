@@ -106,5 +106,4 @@ public class DashboardService(AppDbContext db, ISettingsService settingsService)
 
         return metrics;
     }
-    }
 }
