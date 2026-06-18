@@ -358,7 +358,7 @@ public class DashboardControllerTests(CustomWebApplicationFactory factory)
     public async Task GetMetrics_WithAccessesInPast24Hours_ReturnsPeakEntryTime()
     {
         var adminClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Admin);
-        var now = DateTime.UtcNow;
+        var now = new DateTime(2026, 6, 18, 14, 30, 0, DateTimeKind.Utc);
         var peakHour = now.AddHours(-5);
         var nonPeakHour = now.AddHours(-10);
 
@@ -377,7 +377,7 @@ public class DashboardControllerTests(CustomWebApplicationFactory factory)
         var metrics = await response.Content.ReadFromJsonAsync<DashboardMetricsDto>(CustomWebApplicationFactory.JsonOptions);
 
         Assert.NotNull(metrics);
-        Assert.Equal($"{peakHour.Hour:D2}:00", metrics.PeakEntryTime);
+        Assert.Equal("09:00", metrics.PeakEntryTime);
     }
 
     [Fact]
