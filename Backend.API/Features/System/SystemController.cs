@@ -54,4 +54,18 @@ public class SystemController(ISettingsService settingsService) : ControllerBase
             return Problem();
         }
     }
+
+    [HttpGet("antennas")]
+    public async Task<ActionResult<IEnumerable<AntennaDto>>> GetAntennas([FromServices] ISystemService systemService)
+    {
+        try
+        {
+            var system = await systemService.GetSystemAsync();
+            return Ok(system.Antennas);
+        }
+        catch (Exception)
+        {
+            return Problem();
+        }
+    }
 }

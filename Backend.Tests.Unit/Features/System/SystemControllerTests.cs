@@ -114,4 +114,81 @@ public class SystemControllerTests
         var obj = (ObjectResult)result.Result!;
         Assert.Equal(500, obj.StatusCode);
     }
+
+    [Fact]
+    public async Task GetSystem_WhenSuccessful_ReturnsOkWithSystemDto()
+    {
+        var settingsService = Substitute.For<ISettingsService>();
+        var systemService = Substitute.For<ISystemService>();
+        var expectedSystem = new SystemDto
+        {
+            OccupancyLimit = 120,
+            CurrentOccupancy = 10,
+            Antennas = new List<AntennaDto>()
+        };
+        systemService.GetSystemAsync().Returns(expectedSystem);
+        var controller = new SystemController(settingsService);
+
+        var result = await controller.GetSystem(systemService);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var dto = Assert.IsType<SystemDto>(ok.Value);
+        Assert.Equal(120, dto.OccupancyLimit);
+        Assert.Equal(10, dto.CurrentOccupancy);
+    }
+
+    [Fact]
+    public async Task GetSystem_WhenServiceThrows_Returns500()
+    {
+        var settingsService = Substitute.For<ISettingsService>();
+        var systemService = Substitute.For<ISystemService>();
+        systemService.GetSystemAsync().ThrowsAsync(new Exception("service error"));
+        var controller = new SystemController(settingsService);
+
+        var result = await controller.GetSystem(systemService);
+
+        Assert.IsType<ObjectResult>(result.Result);
+        var obj = (ObjectResult)result.Result!;
+        Assert.Equal(500, obj.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetAntennas_WhenSuccessful_ReturnsOkWithAntennas()
+    {
+        var settingsService = Substitute.For<ISettingsService>();
+        var systemService = Substitute.For<ISystemService>();
+        var expectedSystem = new SystemDto
+        {
+            OccupancyLimit = 120,
+            CurrentOccupancy = 10,
+            Antennas = new List<AntennaDto>
+            {
+                new AntennaDto { Id = Guid.NewGuid(), Name = "Antena 1", Number = 1, Status = "On" }
+            }
+        };
+        systemService.GetSystemAsync().Returns(expectedSystem);
+        var controller = new SystemController(settingsService);
+
+        var result = await controller.GetAntennas(systemService);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var list = Assert.IsType<List<AntennaDto>>(ok.Value);
+        Assert.Single(list);
+        Assert.Equal("Antena 1", list[0].Name);
+    }
+
+    [Fact]
+    public async Task GetAntennas_WhenServiceThrows_Returns500()
+    {
+        var settingsService = Substitute.For<ISettingsService>();
+        var systemService = Substitute.For<ISystemService>();
+        systemService.GetSystemAsync().ThrowsAsync(new Exception("service error"));
+        var controller = new SystemController(settingsService);
+
+        var result = await controller.GetAntennas(systemService);
+
+        Assert.IsType<ObjectResult>(result.Result);
+        var obj = (ObjectResult)result.Result!;
+        Assert.Equal(500, obj.StatusCode);
+    }
 }

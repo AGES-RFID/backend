@@ -28,6 +28,7 @@ public class SystemService(IDashboardService dashboardService, ISettingsService 
                 antennas = cfg.Select(a => new AntennaDto
                 {
                     Id = a.Id,
+                    Name = $"Antena {a.Number}",
                     Number = a.Number,
                     Status = a.Status ?? string.Empty,
                     Sensibility = a.Sensibility,
