@@ -157,16 +157,11 @@ public class SystemControllerTests
     {
         var settingsService = Substitute.For<ISettingsService>();
         var systemService = Substitute.For<ISystemService>();
-        var expectedSystem = new SystemDto
+        var expectedAntennas = new List<AntennaDto>
         {
-            OccupancyLimit = 120,
-            CurrentOccupancy = 10,
-            Antennas = new List<AntennaDto>
-            {
-                new AntennaDto { Id = Guid.NewGuid(), Name = "Antena 1", Number = 1, Status = "On" }
-            }
+            new AntennaDto { Id = Guid.NewGuid(), Name = "Antena 1", Number = 1, Status = "On" }
         };
-        systemService.GetSystemAsync().Returns(expectedSystem);
+        systemService.GetAntennasAsync().Returns(expectedAntennas);
         var controller = new SystemController(settingsService);
 
         var result = await controller.GetAntennas(systemService);
@@ -182,7 +177,7 @@ public class SystemControllerTests
     {
         var settingsService = Substitute.For<ISettingsService>();
         var systemService = Substitute.For<ISystemService>();
-        systemService.GetSystemAsync().ThrowsAsync(new Exception("service error"));
+        systemService.GetAntennasAsync().ThrowsAsync(new Exception("service error"));
         var controller = new SystemController(settingsService);
 
         var result = await controller.GetAntennas(systemService);

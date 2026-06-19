@@ -60,8 +60,8 @@ public class SystemController(ISettingsService settingsService) : ControllerBase
     {
         try
         {
-            var system = await systemService.GetSystemAsync();
-            return Ok(system.Antennas);
+            var antennas = await systemService.GetAntennasAsync();
+            return Ok(antennas);
         }
         catch (Exception)
         {

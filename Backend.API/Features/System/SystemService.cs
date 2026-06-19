@@ -1,5 +1,4 @@
 using Backend.Features.Dashboard;
-using Backend.Features.Settings;
 using Microsoft.Extensions.Configuration;
 using Backend.Features.SystemConfig.Models;
 using System.Linq;
@@ -7,17 +6,28 @@ using System.Collections.Generic;
 
 namespace Backend.Features.SystemConfig;
 
-public class SystemService(IDashboardService dashboardService, ISettingsService settingsService, IConfiguration configuration) : ISystemService
+public class SystemService(IDashboardService dashboardService, IConfiguration configuration) : ISystemService
 {
     private readonly IDashboardService _dashboardService = dashboardService;
-    private readonly ISettingsService _settingsService = settingsService;
     private readonly IConfiguration _configuration = configuration;
 
     public async Task<SystemDto> GetSystemAsync()
     {
         var occupancy = await _dashboardService.GetOccupancyAsync();
-        var maxOccupancy = await _settingsService.GetAsync("max_occupancy", 100);
+        var antennas = await GetAntennasAsync();
 
+        var system = new SystemDto
+        {
+            OccupancyLimit = occupancy.MaxOccupancy,
+            CurrentOccupancy = occupancy.CurrentOccupancy,
+            Antennas = antennas
+        };
+
+        return system;
+    }
+
+    public Task<List<AntennaDto>> GetAntennasAsync()
+    {
         var antennas = new List<AntennaDto>();
 
         try
@@ -41,13 +51,6 @@ public class SystemService(IDashboardService dashboardService, ISettingsService 
             // ignore config parse errors and return empty antennas list
         }
 
-        var system = new SystemDto
-        {
-            OccupancyLimit = maxOccupancy,
-            CurrentOccupancy = occupancy.CurrentOccupancy,
-            Antennas = antennas
-        };
-
-        return system;
+        return Task.FromResult(antennas);
     }
 }
