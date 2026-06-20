@@ -58,7 +58,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     private static bool IsValidEntry(EntityEntry entry)
         => entry.State is (EntityState.Added or EntityState.Modified);
 
-    private void ApplyTimestampsForEntry(EntityEntry entry, DateTime now)
+    private static void ApplyTimestampsForEntry(EntityEntry entry, DateTime now)
     {
         if (entry.State == EntityState.Added)
         {
