@@ -5,5 +5,6 @@ public class DashboardMetricsDto
     public int EntriesLastHour { get; set; }
     public int ExitsLastHour { get; set; }
     public string? PeakEntryTime { get; set; }
+    public int PeakHourEntries { get; set; }
     public int MaxOccupancy { get; set; }
 }

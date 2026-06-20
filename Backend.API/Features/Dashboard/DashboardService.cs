@@ -56,11 +56,12 @@ public class DashboardService(AppDbContext db, ISettingsService settingsService)
         var exitsLastHour = await _db.Accesses
             .CountAsync(a => a.Type == AccessType.Exit && a.Timestamp >= oneHourAgo);
 
-        var peakEntryTime = await _db.Accesses
+        var peakEntry = await _db.Accesses
+            .AsNoTracking()
             .Where(a => a.Type == AccessType.Entry && a.Timestamp >= twentyFourHoursAgo)
             .GroupBy(a => a.Timestamp.Hour)
             .OrderByDescending(g => g.Count())
-            .Select(g => g.Key)
+            .Select(g => new { Hour = g.Key, Count = g.Count() })
             .FirstOrDefaultAsync();
 
         var maxOccupancy = await _settingsService.GetAsync("max_occupancy", 100);
@@ -69,9 +70,10 @@ public class DashboardService(AppDbContext db, ISettingsService settingsService)
         {
             EntriesLastHour = entriesLastHour,
             ExitsLastHour = exitsLastHour,
-            PeakEntryTime = peakEntryTime == 0 && entriesLastHour == 0
-                ? null
-                : $"{peakEntryTime:D2}:00",
+            PeakEntryTime = peakEntry != null
+                ? $"{peakEntry.Hour:D2}:00"
+                : null,
+            PeakHourEntries = peakEntry?.Count ?? 0,
             MaxOccupancy = maxOccupancy
         };
     }

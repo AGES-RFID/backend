@@ -39,6 +39,7 @@ public class DashboardServiceTests
         var result = await service.GetMetricsAsync();
 
         Assert.Equal(0, result.EntriesLastHour);
+        Assert.Equal(0, result.PeakHourEntries);
         Assert.Equal(0, result.ExitsLastHour);
         Assert.Null(result.PeakEntryTime);
     }
@@ -95,6 +96,7 @@ public class DashboardServiceTests
 
         Assert.NotNull(result.PeakEntryTime);
         Assert.Equal($"{peakHour.Hour:D2}:00", result.PeakEntryTime);
+        Assert.Equal(3, result.PeakHourEntries);
     }
 
     [Fact]
@@ -112,6 +114,7 @@ public class DashboardServiceTests
 
         Assert.Equal(0, result.EntriesLastHour);
         Assert.Equal(2, result.ExitsLastHour);
+        Assert.Equal(0, result.PeakHourEntries);
     }
 
     [Fact]
@@ -128,6 +131,7 @@ public class DashboardServiceTests
         var result = await service.GetMetricsAsync();
 
         Assert.Null(result.PeakEntryTime);
+        Assert.Equal(0, result.PeakHourEntries);
     }
 
     [Fact]

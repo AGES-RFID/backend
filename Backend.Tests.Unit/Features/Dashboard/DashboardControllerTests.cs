@@ -98,6 +98,7 @@ public class DashboardControllerTests
         var expected = new DashboardMetricsDto
         {
             EntriesLastHour = 5,
+            PeakHourEntries = 5,
             ExitsLastHour = 3,
             PeakEntryTime = "14:00"
         };
@@ -135,7 +136,8 @@ public class DashboardControllerTests
         {
             EntriesLastHour = 0,
             ExitsLastHour = 0,
-            PeakEntryTime = null
+            PeakEntryTime = null,
+            PeakHourEntries = 0
         };
 
         var service = Substitute.For<IDashboardService>();
@@ -159,6 +161,7 @@ public class DashboardControllerTests
             EntriesLastHour = 0,
             ExitsLastHour = 0,
             PeakEntryTime = null,
+            PeakHourEntries = 0,
             MaxOccupancy = 150
         };
 
