@@ -193,6 +193,7 @@ public class DashboardControllerTests(CustomWebApplicationFactory factory)
         Assert.Equal(0, metrics.EntriesLastHour);
         Assert.Equal(0, metrics.ExitsLastHour);
         Assert.Null(metrics.PeakEntryTime);
+        Assert.Equal(0, metrics.PeakHourEntries);
     }
 
     [Fact]
