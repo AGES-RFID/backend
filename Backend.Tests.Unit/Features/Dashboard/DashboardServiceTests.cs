@@ -156,7 +156,7 @@ public class DashboardServiceTests
         Assert.Equal(100, result.MaxOccupancy);
     }
 
-    // GetOccupancyAsync
+
 
     private static async Task<(Guid tagId, Guid vehicleId)> SeedVehicleCurrentlyInsideAsync(AppDbContext db)
     {
@@ -254,5 +254,28 @@ public class DashboardServiceTests
         var result = await CreateService(db).GetOccupancyAsync();
 
         Assert.Equal(0.0, result.OccupancyPercentage);
+    }
+
+    [Fact]
+    public async Task GetDashboardAsync_ReturnsAggregatedData()
+    {
+        var db = CreateInMemoryDb();
+        db.Settings.Add(new Settings { Name = "max_occupancy", Value = "100" });
+        await db.SaveChangesAsync();
+        await SeedVehicleCurrentlyInsideAsync(db);
+
+        var service = CreateService(db);
+        var result = await service.GetDashboardAsync();
+
+        Assert.Equal(1, result.CurrentOccupancy);
+        Assert.Equal(100, result.MaxOccupancy);
+        Assert.Equal(1, result.EntriesLastHour);
+        Assert.Equal(0, result.ExitsLastHour);
+        Assert.True(result.PeakHourEntries > 0);
+        Assert.NotNull(result.PeakEntryTime);
+        Assert.Equal($"{DateTime.UtcNow.AddMinutes(-30).Hour:D2}:00", result.PeakEntryTime);
+        Assert.True(result.UpdatedAt > DateTime.MinValue);
+        Assert.NotNull(result.Accesses);
+        Assert.NotEmpty(result.Accesses);
     }
 }

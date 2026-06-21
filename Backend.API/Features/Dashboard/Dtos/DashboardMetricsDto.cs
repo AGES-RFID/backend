@@ -1,3 +1,5 @@
+using Backend.Features.Accesses;
+
 namespace Backend.Features.Dashboard;
 
 public class DashboardMetricsDto
@@ -6,5 +8,8 @@ public class DashboardMetricsDto
     public int ExitsLastHour { get; set; }
     public string? PeakEntryTime { get; set; }
     public int PeakHourEntries { get; set; }
+    public int CurrentOccupancy { get; set; }
     public int MaxOccupancy { get; set; }
+    public IEnumerable<AccessDto> Accesses { get; set; } = [];
+    public DateTime UpdatedAt { get; set; }
 }
