@@ -358,9 +358,9 @@ public class DashboardControllerTests(CustomWebApplicationFactory factory)
     public async Task GetMetrics_WithAccessesInPast24Hours_ReturnsPeakEntryTime()
     {
         var adminClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Admin);
-        var now = new DateTime(2026, 6, 18, 14, 30, 0, DateTimeKind.Utc);
-        var peakHour = now.AddHours(-5);
-        var nonPeakHour = now.AddHours(-10);
+        var now = DateTime.UtcNow;
+        var peakHour = new DateTime(now.Year, now.Month, now.Day, now.Hour, 0, 0, DateTimeKind.Utc).AddHours(-5);
+        var nonPeakHour = peakHour.AddHours(-5);
 
         var (_, _, vehicleA) = await SeedVehicleWithTagAsync("PEAK-A");
         var (_, _, vehicleB) = await SeedVehicleWithTagAsync("PEAK-B");
@@ -377,7 +377,7 @@ public class DashboardControllerTests(CustomWebApplicationFactory factory)
         var metrics = await response.Content.ReadFromJsonAsync<DashboardMetricsDto>(CustomWebApplicationFactory.JsonOptions);
 
         Assert.NotNull(metrics);
-        Assert.Equal("09:00", metrics.PeakEntryTime);
+        Assert.Equal($"{peakHour.Hour:D2}:00", metrics.PeakEntryTime);
     }
 
     [Fact]
@@ -399,7 +399,7 @@ public class DashboardControllerTests(CustomWebApplicationFactory factory)
         Assert.Equal(0, metrics.ExitsLastHour);
         Assert.Equal(1, metrics.CurrentOccupancy);
         Assert.Equal(100, metrics.MaxOccupancy);
-        Assert.Equal(1, metrics.PeakEntryHour);
+        Assert.Equal(1, metrics.PeakHourEntries);
         Assert.Equal($"{baseTime.AddMinutes(-30).Hour:D2}:00", metrics.PeakEntryTime);
         Assert.True(metrics.UpdatedAt > DateTime.MinValue);
         Assert.NotNull(metrics.Accesses);

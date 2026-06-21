@@ -83,25 +83,19 @@ public class DashboardService(AppDbContext db, ISettingsService settingsService)
     {
         var now = DateTime.UtcNow;
         var twentyFourHoursAgo = now.AddHours(-24);
-
-        var metricsTask = GetMetricsAsync();
-        var occupancyTask = GetOccupancyAsync();
-        var accessesTask = _db.Accesses
+        var metrics = await GetMetricsAsync();
+        var occupancy = await GetOccupancyAsync();
+        var accesses = await _db.Accesses
             .AsNoTracking()
             .Where(a => a.Timestamp >= twentyFourHoursAgo)
             .OrderByDescending(a => a.Timestamp)
-            .Select(a => AccessDto.FromModel(a))
             .ToListAsync();
 
-        await Task.WhenAll(metricsTask, occupancyTask, accessesTask);
-
-        var metrics = await metricsTask;
-        var occupancy = await occupancyTask;
-        var accesses = await accessesTask;
+        var accessDtos = accesses.Select(AccessDto.FromModel).ToList();
 
         metrics.CurrentOccupancy = occupancy.CurrentOccupancy;
         metrics.MaxOccupancy = occupancy.MaxOccupancy;
-        metrics.Accesses = accesses;
+        metrics.Accesses = accessDtos;
         metrics.UpdatedAt = now;
 
         return metrics;

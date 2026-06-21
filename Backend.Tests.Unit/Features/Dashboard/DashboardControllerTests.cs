@@ -201,7 +201,7 @@ public class DashboardControllerTests
         var expected = new DashboardMetricsDto
         {
             EntriesLastHour = 10,
-            PeakEntryHour = 5,
+            PeakHourEntries = 5,
             PeakEntryTime = "10:00",
             UpdatedAt = DateTime.UtcNow
         };
@@ -215,7 +215,7 @@ public class DashboardControllerTests
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         var dto = Assert.IsType<DashboardMetricsDto>(ok.Value);
         Assert.Equal(10, dto.EntriesLastHour);
-        Assert.Equal(5, dto.PeakEntryHour);
+        Assert.Equal(5, dto.PeakHourEntries);
         Assert.Equal("10:00", dto.PeakEntryTime);
         Assert.Equal(expected.UpdatedAt, dto.UpdatedAt);
     }
