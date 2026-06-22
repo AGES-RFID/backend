@@ -119,6 +119,27 @@ namespace Backend.Database.Migrations
                     b.ToTable("parking_prices", (string)null);
                 });
 
+            modelBuilder.Entity("Backend.Features.GatewayStatus.ReaderStatus", b =>
+                {
+                    b.Property<Guid>("ReaderId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reader_id");
+
+                    b.Property<DateTime>("LastPing")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_ping");
+
+                    b.Property<string>("ReaderStatusValue")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("reader_status");
+
+                    b.HasKey("ReaderId")
+                        .HasName("pk_reader_status");
+
+                    b.ToTable("reader_status", (string)null);
+                });
+
             modelBuilder.Entity("Backend.Features.Tags.Tag", b =>
                 {
                     b.Property<Guid>("TagId")
@@ -320,6 +341,45 @@ namespace Backend.Database.Migrations
                         .HasDatabaseName("ix_vehicles_user_id");
 
                     b.ToTable("vehicles", (string)null);
+                });
+
+            modelBuilder.Entity("Backend.Features.GatewayStatus.ReaderStatus", b =>
+                {
+                    b.OwnsMany("Backend.Features.GatewayStatus.ReaderAntennaStatus", "AntennaList", b1 =>
+                        {
+                            b1.Property<Guid>("ReaderStatusReaderId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<int>("Id")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("integer");
+
+                            b1.Property<string>("AntennaStatus")
+                                .IsRequired()
+                                .HasJsonPropertyName("antenna_status")
+                                .HasColumnType("text");
+
+                            b1.Property<int>("Port")
+                                .HasJsonPropertyName("port")
+                                .HasColumnType("integer");
+
+                            b1.Property<double>("Power")
+                                .HasJsonPropertyName("power")
+                                .HasColumnType("double precision");
+
+                            b1.Property<double>("Sensitivity")
+                                .HasJsonPropertyName("sensitivity")
+                                .HasColumnType("double precision");
+
+                            b1.HasKey("ReaderStatusReaderId", "Id");
+
+                            b1.ToJson("antenna_list");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ReaderStatusReaderId");
+                        });
+
+                    b.Navigation("AntennaList");
                 });
 
             modelBuilder.Entity("Backend.Features.Accesses.Access", b =>

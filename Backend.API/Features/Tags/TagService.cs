@@ -42,6 +42,20 @@ public class TagService(AppDbContext db) : ITagService
             Status = TagStatus.AVAILABLE
         };
 
+        var vehicleWithoutTag = await _db.Vehicles
+            .Where(v => v.TagId == null)
+            .OrderBy(v => v.CreatedAt)
+            .ThenBy(v => v.VehicleId)
+            .FirstOrDefaultAsync();
+
+        if (vehicleWithoutTag is not null)
+        {
+            vehicleWithoutTag.TagId = tag.TagId;
+            vehicleWithoutTag.Tag = tag;
+            tag.Vehicle = vehicleWithoutTag;
+            tag.Status = TagStatus.IN_USE;
+        }
+
         await _db.Tags.AddAsync(tag);
         await _db.SaveChangesAsync();
 

@@ -1,5 +1,7 @@
 using Backend.Database;
 using Backend.Features.Auth;
+using Backend.Features.Tags;
+using Backend.Features.Tags.Enums;
 using Backend.Features.Users;
 using Microsoft.EntityFrameworkCore;
 
@@ -40,16 +42,21 @@ public class VehicleService(AppDbContext db, ICurrentUserContext currentUserCont
         if (exists)
             throw new InvalidOperationException("Plate already exists. Try again.");
 
-        var vehicle = await _db.Vehicles.AddAsync(new Vehicle
+        var vehicle = new Vehicle
         {
             Plate = dto.Plate,
             Brand = dto.Brand,
             Model = dto.Model,
             UserId = targetUserId
-        });
+        };
+
+        await AssignAvailableTagAsync(vehicle);
+        await _db.Vehicles.AddAsync(vehicle);
 
         await _db.SaveChangesAsync();
-        return VehicleDto.FromModel(vehicle.Entity);
+        await AssignAvailableTagsToVehiclesWithoutTagsAsync();
+
+        return VehicleDto.FromModel(vehicle);
     }
 
     public async Task<IEnumerable<VehicleWithOwnerDto>> GetAllVehiclesAsync(bool includeUsers)
@@ -164,4 +171,57 @@ public class VehicleService(AppDbContext db, ICurrentUserContext currentUserCont
         if (actorRole != UserRole.Admin && vehicle.UserId != actorUserId)
             throw new KeyNotFoundException("Vehicle not found");
     }
+
+    private async Task AssignAvailableTagAsync(Vehicle vehicle)
+    {
+        if (vehicle.TagId.HasValue)
+            return;
+
+        var tag = await GetNextAvailableTagAsync();
+        if (tag is null)
+            return;
+
+        vehicle.TagId = tag.TagId;
+        vehicle.Tag = tag;
+        tag.Status = TagStatus.IN_USE;
+    }
+
+    private async Task AssignAvailableTagsToVehiclesWithoutTagsAsync()
+    {
+        var availableTags = await _db.Tags
+            .Where(t => t.Status == TagStatus.AVAILABLE && t.Vehicle == null)
+            .OrderBy(t => t.CreatedAt)
+            .ThenBy(t => t.TagId)
+            .ToListAsync();
+
+        if (availableTags.Count == 0)
+            return;
+
+        var vehiclesWithoutTags = await _db.Vehicles
+            .Where(v => v.TagId == null)
+            .OrderBy(v => v.CreatedAt)
+            .ThenBy(v => v.VehicleId)
+            .Take(availableTags.Count)
+            .ToListAsync();
+
+        for (var i = 0; i < vehiclesWithoutTags.Count; i++)
+        {
+            var vehicle = vehiclesWithoutTags[i];
+            var tag = availableTags[i];
+
+            vehicle.TagId = tag.TagId;
+            vehicle.Tag = tag;
+            tag.Status = TagStatus.IN_USE;
+        }
+
+        if (vehiclesWithoutTags.Count > 0)
+            await _db.SaveChangesAsync();
+    }
+
+    private Task<Tag?> GetNextAvailableTagAsync() =>
+        _db.Tags
+            .Where(t => t.Status == TagStatus.AVAILABLE && t.Vehicle == null)
+            .OrderBy(t => t.CreatedAt)
+            .ThenBy(t => t.TagId)
+            .FirstOrDefaultAsync();
 }

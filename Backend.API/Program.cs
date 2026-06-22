@@ -16,6 +16,7 @@ using Backend.Features.Dashboard;
 using Backend.Features.Transactions;
 using Backend.Features.Accesses;
 using Backend.Features.ParkingPrices;
+using Backend.Features.GatewayStatus;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -102,6 +103,7 @@ builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IAccessesService, AccessesService>();
 builder.Services.AddScoped<IParkingPricesService, ParkingPricesService>();
+builder.Services.AddScoped<IGatewayStatusService, GatewayStatusService>();
 
 // Configure JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>()
