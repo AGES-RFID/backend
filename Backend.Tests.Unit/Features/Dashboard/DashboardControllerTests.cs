@@ -232,4 +232,71 @@ public class DashboardControllerTests
         var status = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(500, status.StatusCode);
     }
+
+    [Fact]
+    public async Task GetPermanence_WhenServiceSucceeds_ReturnsOk()
+    {
+        var expected = new List<PermanenceDto>
+        {
+            new() { RfidTag = "EPC-001", Plate = "ABC-1234", MinutesParked = 30 }
+        };
+
+        var service = Substitute.For<IDashboardService>();
+        service.GetPermanenceAsync().Returns(expected);
+
+        var controller = new DashboardController(service);
+
+        var result = await controller.GetPermanence();
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var dto = Assert.IsType<List<PermanenceDto>>(ok.Value);
+        Assert.Single(dto);
+        Assert.Equal("EPC-001", dto[0].RfidTag);
+        Assert.Equal("ABC-1234", dto[0].Plate);
+        Assert.Equal(30, dto[0].MinutesParked);
+    }
+
+    [Fact]
+    public async Task GetPermanence_WhenServiceSucceeds_ReturnsStatusCode200()
+    {
+        var service = Substitute.For<IDashboardService>();
+        service.GetPermanenceAsync().Returns(new List<PermanenceDto>());
+
+        var controller = new DashboardController(service);
+
+        var result = await controller.GetPermanence();
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        Assert.Equal(200, ok.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetPermanence_WhenServiceThrows_Returns500()
+    {
+        var service = Substitute.For<IDashboardService>();
+        service.GetPermanenceAsync().ThrowsAsync(new Exception("db error"));
+
+        var controller = new DashboardController(service);
+
+        var result = await controller.GetPermanence();
+
+        var status = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(500, status.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetPermanence_WhenNoVehiclesInside_ReturnsEmptyList()
+    {
+        var service = Substitute.For<IDashboardService>();
+        service.GetPermanenceAsync().Returns(new List<PermanenceDto>());
+
+        var controller = new DashboardController(service);
+
+        var result = await controller.GetPermanence();
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var dto = Assert.IsType<List<PermanenceDto>>(ok.Value);
+        Assert.Empty(dto);
+    }
+
 }
