@@ -7,9 +7,11 @@ namespace Backend.Tests.Unit.Features.Dashboard;
 
 public class DashboardControllerTests
 {
-    private static OccupancyDto MakeOccupancyDto(int count = 0) => new()
+    private static OccupancyDto MakeOccupancyDto(int count = 0, int maxOccupancy = 100, double percentage = 0) => new()
     {
         CurrentOccupancy = count,
+        MaxOccupancy = maxOccupancy,
+        OccupancyPercentage = percentage,
         Vehicles = []
     };
 
@@ -96,6 +98,7 @@ public class DashboardControllerTests
         var expected = new DashboardMetricsDto
         {
             EntriesLastHour = 5,
+            PeakHourEntries = 5,
             ExitsLastHour = 3,
             PeakEntryTime = "14:00"
         };
@@ -133,7 +136,8 @@ public class DashboardControllerTests
         {
             EntriesLastHour = 0,
             ExitsLastHour = 0,
-            PeakEntryTime = null
+            PeakEntryTime = null,
+            PeakHourEntries = 0
         };
 
         var service = Substitute.For<IDashboardService>();
@@ -147,5 +151,85 @@ public class DashboardControllerTests
         Assert.Equal(0, dto.EntriesLastHour);
         Assert.Equal(0, dto.ExitsLastHour);
         Assert.Null(dto.PeakEntryTime);
+    }
+
+    [Fact]
+    public async Task GetMetrics_WhenServiceReturnsMaxOccupancy_ReturnsCorrectValue()
+    {
+        var expected = new DashboardMetricsDto
+        {
+            EntriesLastHour = 0,
+            ExitsLastHour = 0,
+            PeakEntryTime = null,
+            PeakHourEntries = 0,
+            MaxOccupancy = 150
+        };
+
+        var service = Substitute.For<IDashboardService>();
+        service.GetMetricsAsync().Returns(expected);
+
+        var controller = new DashboardController(service);
+        var result = await controller.GetMetrics();
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var dto = Assert.IsType<DashboardMetricsDto>(ok.Value);
+        Assert.Equal(150, dto.MaxOccupancy);
+    }
+
+    [Fact]
+    public async Task GetMetrics_WhenServiceReturnsPeakOccupancy_ReturnsCorrectValue()
+    {
+        var expected = new DashboardMetricsDto
+        {
+            PeakHourEntries = 42,
+            PeakEntryTime = "14:00"
+        };
+        var service = Substitute.For<IDashboardService>();
+        service.GetMetricsAsync().Returns(expected);
+        var controller = new DashboardController(service);
+
+        var result = await controller.GetMetrics();
+
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        var dto = Assert.IsType<DashboardMetricsDto>(okResult.Value);
+        Assert.Equal(42, dto.PeakHourEntries);
+        Assert.Equal("14:00", dto.PeakEntryTime);
+    }
+    [Fact]
+    public async Task GetDashboard_WhenServiceSucceeds_ReturnsOkWithDashboardMetrics()
+    {
+        var expected = new DashboardMetricsDto
+        {
+            EntriesLastHour = 10,
+            PeakHourEntries = 5,
+            PeakEntryTime = "10:00",
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        var service = Substitute.For<IDashboardService>();
+        service.GetDashboardAsync().Returns(expected);
+
+        var controller = new DashboardController(service);
+        var result = await controller.GetDashboard();
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var dto = Assert.IsType<DashboardMetricsDto>(ok.Value);
+        Assert.Equal(10, dto.EntriesLastHour);
+        Assert.Equal(5, dto.PeakHourEntries);
+        Assert.Equal("10:00", dto.PeakEntryTime);
+        Assert.Equal(expected.UpdatedAt, dto.UpdatedAt);
+    }
+
+    [Fact]
+    public async Task GetDashboard_WhenServiceThrows_Returns500()
+    {
+        var service = Substitute.For<IDashboardService>();
+        service.GetDashboardAsync().ThrowsAsync(new Exception("db error"));
+
+        var controller = new DashboardController(service);
+        var result = await controller.GetDashboard();
+
+        var status = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(500, status.StatusCode);
     }
 }

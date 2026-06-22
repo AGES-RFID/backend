@@ -1,4 +1,5 @@
-﻿using Backend.Features.Users;
+﻿using Backend.Features.Auth;
+using Backend.Features.Users;
 using Microsoft.AspNetCore.Mvc;
 using NSubstitute;
 
@@ -6,6 +7,9 @@ namespace Backend.Tests.Unit.Features.Users;
 
 public class UsersControllerTests
 {
+    private static UsersController CreateController(IUserService userService)
+        => new(userService, Substitute.For<ICurrentUserContext>());
+
     [Fact]
     public async Task GetUser_WhenServiceThrowsKeyNotFoundException_ReturnsNotFound()
     {
@@ -14,7 +18,7 @@ public class UsersControllerTests
         userService.GetUserAsync(userId)
             .Returns(Task.FromException<UserWithVehiclesDto>(new KeyNotFoundException("not found")));
 
-        var controller = new UsersController(userService);
+        var controller = CreateController(userService);
         var result = await controller.GetUser(userId);
 
         Assert.IsType<NotFoundResult>(result.Result);
@@ -30,7 +34,7 @@ public class UsersControllerTests
         var userService = Substitute.For<IUserService>();
         userService.GetUserAsync(userId).Returns(expected);
 
-        var controller = new UsersController(userService);
+        var controller = CreateController(userService);
         var result = await controller.GetUser(userId);
 
         var ok = Assert.IsType<OkObjectResult>(result.Result);
@@ -52,7 +56,7 @@ public class UsersControllerTests
         userService.UpdateUserAsync(userId, Arg.Any<UpdateUserDto>())
             .Returns(Task.FromException<UserDto>(new KeyNotFoundException("not found")));
 
-        var controller = new UsersController(userService);
+        var controller = CreateController(userService);
         var result = await controller.UpdateUser(userId, dto);
 
         Assert.IsType<NotFoundResult>(result);
@@ -68,7 +72,7 @@ public class UsersControllerTests
         userService.UpdateUserAsync(userId, Arg.Any<UpdateUserDto>())
             .Returns(Task.FromResult(new UserDto { UserId = userId, Name = dto.Name ?? "existing", Email = dto.Email ?? "existing@email.com", Role = UserRole.Admin }));
 
-        var controller = new UsersController(userService);
+        var controller = CreateController(userService);
         var result = await controller.UpdateUser(userId, dto);
 
         Assert.IsType<OkObjectResult>(result);
@@ -84,7 +88,7 @@ public class UsersControllerTests
              new() { UserId = Guid.NewGuid(), Name = "Bob", Email = "bob@example.com", Role = UserRole.Admin }
         ]);
 
-        var controller = new UsersController(userService);
+        var controller = CreateController(userService);
         var result = await controller.GetAllUsers();
 
         var ok = Assert.IsType<OkObjectResult>(result.Result);
@@ -101,7 +105,7 @@ public class UsersControllerTests
         var userService = Substitute.For<IUserService>();
         userService.CreateUserAsync(Arg.Any<CreateUserDto>()).Returns(created);
 
-        var controller = new UsersController(userService);
+        var controller = CreateController(userService);
         var result = await controller.CreateUser(dto);
 
         Assert.IsType<CreatedAtActionResult>(result.Result);
@@ -116,7 +120,7 @@ public class UsersControllerTests
         userService.CreateUserAsync(Arg.Any<CreateUserDto>())
             .Returns(Task.FromException<UserDto>(new EmailAlreadyExistsException(dto.Email)));
 
-        var controller = new UsersController(userService);
+        var controller = CreateController(userService);
         var result = await controller.CreateUser(dto);
 
         Assert.IsType<ConflictObjectResult>(result.Result);
@@ -129,7 +133,7 @@ public class UsersControllerTests
         var userService = Substitute.For<IUserService>();
         userService.DeleteUserAsync(userId).Returns(Task.CompletedTask);
 
-        var controller = new UsersController(userService);
+        var controller = CreateController(userService);
         var result = await controller.DeleteUser(userId);
 
         Assert.IsType<NoContentResult>(result);
@@ -143,7 +147,7 @@ public class UsersControllerTests
         userService.DeleteUserAsync(userId)
             .Returns(Task.FromException(new KeyNotFoundException()));
 
-        var controller = new UsersController(userService);
+        var controller = CreateController(userService);
         var result = await controller.DeleteUser(userId);
 
         Assert.IsType<NotFoundResult>(result);
@@ -156,7 +160,7 @@ public class UsersControllerTests
         userService.GetUserByNameAsync("Alice")
             .Returns(new UserWithVehiclesDto { UserId = Guid.NewGuid(), Name = "Alice", Email = "alice@example.com", Role = UserRole.Admin });
 
-        var controller = new UsersController(userService);
+        var controller = CreateController(userService);
         var result = await controller.GetUserByName("Alice");
 
         Assert.IsType<OkObjectResult>(result.Result);
@@ -169,7 +173,7 @@ public class UsersControllerTests
         userService.GetUserByNameAsync("Inexistente")
             .Returns(Task.FromException<UserWithVehiclesDto>(new KeyNotFoundException()));
 
-        var controller = new UsersController(userService);
+        var controller = CreateController(userService);
         var result = await controller.GetUserByName("Inexistente");
 
         Assert.IsType<NotFoundResult>(result.Result);

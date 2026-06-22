@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Backend.Features.ParkingPrices;
@@ -30,6 +31,7 @@ public class ParkingPricesController(IParkingPricesService parkingPricesService)
     }
 
     [HttpPost]
+    [Authorize(Roles = "Admin")]
     public async Task<ActionResult<ParkingPricesDto>> CreateParkingPrice(CreateParkingPriceDto dto)
     {
         var parkingPrice = await _parkingPricesService.CreateParkingPriceAsync(dto);
@@ -37,6 +39,7 @@ public class ParkingPricesController(IParkingPricesService parkingPricesService)
     }
 
     [HttpPatch("{id}")]
+    [Authorize(Roles = "Admin")]
     public async Task<ActionResult<ParkingPricesDto>> UpdateParkingPrice(Guid id, UpdateParkingPriceDto dto)
     {
         try
@@ -51,6 +54,7 @@ public class ParkingPricesController(IParkingPricesService parkingPricesService)
     }
 
     [HttpDelete("{id}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> DeleteParkingPrice(Guid id)
     {
         try

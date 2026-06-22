@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 
@@ -5,6 +6,7 @@ namespace Backend.Features.Dashboard;
 
 [ApiController]
 [Route("api/dashboard")]
+[Authorize(Roles = "Admin")]
 public class DashboardController(IDashboardService dashboardService) : ControllerBase
 {
     private readonly IDashboardService _dashboardService = dashboardService;
@@ -30,6 +32,20 @@ public class DashboardController(IDashboardService dashboardService) : Controlle
         {
             var metrics = await _dashboardService.GetMetricsAsync();
             return Ok(metrics);
+        }
+        catch (Exception)
+        {
+            return Problem();
+        }
+    }
+
+    [HttpGet]
+    public async Task<ActionResult<DashboardMetricsDto>> GetDashboard()
+    {
+        try
+        {
+            var dashboard = await _dashboardService.GetDashboardAsync();
+            return Ok(dashboard);
         }
         catch (Exception)
         {

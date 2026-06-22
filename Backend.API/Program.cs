@@ -7,6 +7,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 
 using Backend.Database;
+using Backend.Database.Seeding;
 using Backend.Configuration;
 using Backend.Features.Tags;
 using Backend.Features.Auth;
@@ -17,6 +18,8 @@ using Backend.Features.Transactions;
 using Backend.Features.Accesses;
 using Backend.Features.ParkingPrices;
 using Backend.Features.GatewayStatus;
+using Backend.Features.Settings;
+using Backend.Features.SystemConfig;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -103,7 +106,9 @@ builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IAccessesService, AccessesService>();
 builder.Services.AddScoped<IParkingPricesService, ParkingPricesService>();
-builder.Services.AddScoped<IGatewayStatusService, GatewayStatusService>();
+builder.Services.AddScoped<ISettingsService, SettingsService>();
+builder.Services.AddScoped<ISystemService, SystemService>();
+builder.Services.AddScoped<IAppSeeder, AppSeeder>();
 
 // Configure JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>()
@@ -143,8 +148,17 @@ if (!app.Environment.IsEnvironment("Testing") && !skipMigrations)
     using (var scope = app.Services.CreateScope())
     {
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        db.Database.Migrate();
+        await db.Database.MigrateAsync();
     }
+}
+
+// Seed initial data
+var skipSeeding = string.Equals(Environment.GetEnvironmentVariable("SKIP_SEEDING"), "true", StringComparison.OrdinalIgnoreCase);
+if (!skipSeeding)
+{
+    using var scope = app.Services.CreateScope();
+    var seeder = scope.ServiceProvider.GetRequiredService<IAppSeeder>();
+    await seeder.SeedAsync();
 }
 
 // Configure the HTTP request pipeline
@@ -163,4 +177,4 @@ app.UseAuthorization();
 app.MapGet("/api", () => Results.Ok(new { status = "ok", timestamp = DateTime.UtcNow }));
 app.MapControllers();
 
-app.Run();
+await app.RunAsync();

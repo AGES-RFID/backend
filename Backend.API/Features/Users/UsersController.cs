@@ -1,14 +1,18 @@
+using Backend.Features.Auth;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Backend.Features.Users;
 
 [ApiController]
 [Route("api/users")]
-public class UsersController(IUserService userService) : ControllerBase
+public class UsersController(IUserService userService, ICurrentUserContext currentUserContext) : ControllerBase
 {
     private readonly IUserService _userService = userService;
+    private readonly ICurrentUserContext _currentUserContext = currentUserContext;
 
     [HttpGet]
+    [Authorize(Roles = "Admin")]
     public async Task<ActionResult<IEnumerable<UserWithVehiclesDto>>> GetAllUsers()
     {
         var users = await _userService.GetAllUsersAsync();
@@ -16,6 +20,7 @@ public class UsersController(IUserService userService) : ControllerBase
     }
 
     [HttpGet("by-name/{name}")]
+    [Authorize(Roles = "Admin")]
     public async Task<ActionResult<UserWithVehiclesDto>> GetUserByName(string name)
     {
         try
@@ -30,6 +35,7 @@ public class UsersController(IUserService userService) : ControllerBase
     }
 
     [HttpGet("{userId}")]
+    [Authorize(Roles = "Admin")]
     public async Task<ActionResult<UserWithVehiclesDto>> GetUser(Guid userId)
     {
         try
@@ -44,11 +50,29 @@ public class UsersController(IUserService userService) : ControllerBase
     }
 
     [HttpPost]
+    [AllowAnonymous]
     public async Task<ActionResult<UserDto>> CreateUser(CreateUserDto dto)
     {
         try
         {
-            var user = await _userService.CreateUserAsync(dto);
+            if (_currentUserContext.IsAuthenticated && !_currentUserContext.IsAdmin)
+                return Forbid();
+
+            var createDto = dto;
+            if (!_currentUserContext.IsAuthenticated)
+            {
+                createDto = new CreateUserDto
+                {
+                    Name = dto.Name,
+                    Email = dto.Email,
+                    Password = dto.Password,
+                    Cpf = dto.Cpf,
+                    Cellphone = dto.Cellphone,
+                    Role = UserRole.Customer
+                };
+            }
+
+            var user = await _userService.CreateUserAsync(createDto);
             return CreatedAtAction(nameof(GetUser), new { userId = user.UserId }, user);
         }
         catch (EmailAlreadyExistsException)
@@ -65,10 +89,20 @@ public class UsersController(IUserService userService) : ControllerBase
     // PUT -> Atualiza TODOS os campos da entidade
     // PATCH -> Atualização partical da entidade (ex: apenas o nome ou email)
     [HttpPatch("{userId}")]
+    [Authorize]
     public async Task<IActionResult> UpdateUser(Guid userId, UpdateUserDto dto)
     {
         try
         {
+            var actorUserId = _currentUserContext.GetRequiredUserId();
+            var actorRole = _currentUserContext.GetRequiredRole();
+
+            if (actorRole != UserRole.Admin && actorUserId != userId)
+                return Forbid();
+
+            if (actorRole != UserRole.Admin)
+                dto.Role = null;
+
             var updateUser = await _userService.UpdateUserAsync(userId, dto);
             return Ok(updateUser);
         }
@@ -84,6 +118,7 @@ public class UsersController(IUserService userService) : ControllerBase
     }
 
     [HttpDelete("{userId}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> DeleteUser(Guid userId)
     {
         try

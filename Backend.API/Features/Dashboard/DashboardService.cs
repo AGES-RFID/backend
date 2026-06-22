@@ -1,6 +1,7 @@
 using Backend.Database;
 using Backend.Features.Accesses;
 using Backend.Features.Vehicles;
+using Backend.Features.Settings;
 using Microsoft.EntityFrameworkCore;
 
 namespace Backend.Features.Dashboard;
@@ -9,11 +10,13 @@ public interface IDashboardService
 {
     Task<OccupancyDto> GetOccupancyAsync();
     Task<DashboardMetricsDto> GetMetricsAsync();
+    Task<DashboardMetricsDto> GetDashboardAsync();
 }
 
-public class DashboardService(AppDbContext db) : IDashboardService
+public class DashboardService(AppDbContext db, ISettingsService settingsService) : IDashboardService
 {
     private readonly AppDbContext _db = db;
+    private readonly ISettingsService _settingsService = settingsService;
 
     public async Task<OccupancyDto> GetOccupancyAsync()
     {
@@ -28,10 +31,16 @@ public class DashboardService(AppDbContext db) : IDashboardService
             .ToListAsync();
 
         var vehicleDtos = vehicles.Select(VehicleDto.FromModel).ToList();
+        var maxOccupancy = await _settingsService.GetAsync("max_occupancy", 100);
+        var occupancyPercentage = maxOccupancy == 0
+            ? 0.0
+            : Math.Round((double)vehicleDtos.Count / maxOccupancy * 100, 1);
 
         return new OccupancyDto
         {
             CurrentOccupancy = vehicleDtos.Count,
+            MaxOccupancy = maxOccupancy,
+            OccupancyPercentage = occupancyPercentage,
             Vehicles = vehicleDtos
         };
     }
@@ -48,20 +57,47 @@ public class DashboardService(AppDbContext db) : IDashboardService
         var exitsLastHour = await _db.Accesses
             .CountAsync(a => a.Type == AccessType.Exit && a.Timestamp >= oneHourAgo);
 
-        var peakEntryTime = await _db.Accesses
+        var peakEntry = await _db.Accesses
+            .AsNoTracking()
             .Where(a => a.Type == AccessType.Entry && a.Timestamp >= twentyFourHoursAgo)
             .GroupBy(a => a.Timestamp.Hour)
             .OrderByDescending(g => g.Count())
-            .Select(g => g.Key)
+            .Select(g => new { Hour = g.Key, Count = g.Count() })
             .FirstOrDefaultAsync();
+
+        var maxOccupancy = await _settingsService.GetAsync("max_occupancy", 100);
 
         return new DashboardMetricsDto
         {
             EntriesLastHour = entriesLastHour,
             ExitsLastHour = exitsLastHour,
-            PeakEntryTime = peakEntryTime == 0 && entriesLastHour == 0
-                ? null
-                : $"{peakEntryTime:D2}:00"
+            PeakEntryTime = peakEntry != null
+                ? $"{peakEntry.Hour:D2}:00"
+                : null,
+            PeakHourEntries = peakEntry?.Count ?? 0,
+            MaxOccupancy = maxOccupancy
         };
+    }
+
+    public async Task<DashboardMetricsDto> GetDashboardAsync()
+    {
+        var now = DateTime.UtcNow;
+        var twentyFourHoursAgo = now.AddHours(-24);
+        var metrics = await GetMetricsAsync();
+        var occupancy = await GetOccupancyAsync();
+        var accesses = await _db.Accesses
+            .AsNoTracking()
+            .Where(a => a.Timestamp >= twentyFourHoursAgo)
+            .OrderByDescending(a => a.Timestamp)
+            .ToListAsync();
+
+        var accessDtos = accesses.Select(AccessDto.FromModel).ToList();
+
+        metrics.CurrentOccupancy = occupancy.CurrentOccupancy;
+        metrics.MaxOccupancy = occupancy.MaxOccupancy;
+        metrics.Accesses = accessDtos;
+        metrics.UpdatedAt = now;
+
+        return metrics;
     }
 }

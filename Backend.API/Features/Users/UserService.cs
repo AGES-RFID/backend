@@ -41,7 +41,7 @@ public class UserService(AppDbContext db) : IUserService
                     u,
                     _db.Transactions
                     .Where(t => t.UserId == u.UserId)
-                    .Sum(t => t.TransactionType == TransactionType.DEPOSIT ? t.Amount : -t.Amount)
+                    .Sum(t => (decimal?)(t.TransactionType == TransactionType.DEPOSIT ? t.Amount : -t.Amount)) ?? 0m
                 )
             )
             .FirstOrDefaultAsync()
@@ -77,7 +77,7 @@ public class UserService(AppDbContext db) : IUserService
                      u,
                     _db.Transactions
                     .Where(t => t.UserId == u.UserId)
-                    .Sum(t => t.TransactionType == TransactionType.DEPOSIT ? t.Amount : -t.Amount)
+                    .Sum(t => (decimal?)(t.TransactionType == TransactionType.DEPOSIT ? t.Amount : -t.Amount)) ?? 0m
                 )
             )
             .ToListAsync();
