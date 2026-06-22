@@ -92,29 +92,40 @@ public class GatewayStatusControllerTests
     }
 
     [Fact]
-    public void SyncAntennaConfiguration_WhenPayloadIsValid_ReturnsNoContent()
+    public async Task SyncAntennaConfiguration_WhenPayloadIsValid_ReturnsOkWithSavedStatus()
     {
         var service = Substitute.For<IGatewayStatusService>();
+        var dto = new ReaderStatusDto
+        {
+            Connected = true,
+            Antennas = [new AntennaStatusDto { Port = 1, Connected = true, Power = 30, Sensitivity = -70 }]
+        };
+        var expected = new ReaderStatusResponseDto
+        {
+            Connected = true,
+            Antennas = dto.Antennas,
+            ReceivedAtUtc = DateTime.UtcNow
+        };
+        service.ConfirmConfigurationAsync(dto).Returns(expected);
         var controller = new GatewayStatusController(service);
 
-        var result = controller.SyncAntennaConfiguration(new AntennaConfigurationDto
-        {
-            Power = 30,
-            Sensitivity = -70
-        });
+        var result = await controller.SyncAntennaConfiguration(dto);
 
-        Assert.IsType<NoContentResult>(result);
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        Assert.Equal(expected, ok.Value);
+        await service.Received(1).ConfirmConfigurationAsync(dto);
     }
 
     [Fact]
-    public void SyncAntennaConfiguration_WhenModelStateIsInvalid_ReturnsBadRequest()
+    public async Task SyncAntennaConfiguration_WhenModelStateIsInvalid_ReturnsBadRequest()
     {
         var service = Substitute.For<IGatewayStatusService>();
         var controller = new GatewayStatusController(service);
         controller.ModelState.AddModelError("Power", "required");
 
-        var result = controller.SyncAntennaConfiguration(new AntennaConfigurationDto());
+        var result = await controller.SyncAntennaConfiguration(new ReaderStatusDto());
 
-        Assert.IsType<BadRequestObjectResult>(result);
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+        await service.DidNotReceiveWithAnyArgs().ConfirmConfigurationAsync(default!);
     }
 }

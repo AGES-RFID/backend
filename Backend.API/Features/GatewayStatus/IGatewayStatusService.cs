@@ -4,4 +4,5 @@ public interface IGatewayStatusService
 {
     Task<ReaderStatusResponseDto> SaveStatusAsync(ReaderStatusDto status);
     Task<ReaderStatusResponseDto?> GetLastStatusAsync();
+    Task<ReaderStatusResponseDto> ConfirmConfigurationAsync(ReaderStatusDto status);
 }

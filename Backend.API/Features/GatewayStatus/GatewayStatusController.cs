@@ -25,12 +25,13 @@ public class GatewayStatusController(IGatewayStatusService gatewayStatusService)
         return status is null ? NotFound(new { error = "Gateway status has not been received yet." }) : Ok(status);
     }
 
-    [HttpPost("/configuration")]
-    public IActionResult SyncAntennaConfiguration([FromBody] AntennaConfigurationDto currentConfiguration)
+    [HttpPost("configuration")]
+    public async Task<ActionResult<ReaderStatusResponseDto>> SyncAntennaConfiguration([FromBody] ReaderStatusDto currentConfiguration)
     {
         if (!ModelState.IsValid)
             return BadRequest(new { error = "Invalid antenna configuration payload." });
 
-        return NoContent();
+        var savedStatus = await _gatewayStatusService.ConfirmConfigurationAsync(currentConfiguration);
+        return Ok(savedStatus);
     }
 }

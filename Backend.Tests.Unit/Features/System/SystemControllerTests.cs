@@ -186,4 +186,53 @@ public class SystemControllerTests
         var obj = (ObjectResult)result.Result!;
         Assert.Equal(500, obj.StatusCode);
     }
+
+    [Fact]
+    public async Task UpdateAntenna_WhenSuccessful_ReturnsOkWithUpdatedAntenna()
+    {
+        var settingsService = Substitute.For<ISettingsService>();
+        var systemService = Substitute.For<ISystemService>();
+        var antennaId = Guid.Parse("00000000-0000-0000-0000-000000000001");
+        var updateDto = new UpdateAntennaDto
+        {
+            Status = "Off",
+            Sensibility = -70,
+            Power = 30.5
+        };
+        var expected = new AntennaDto
+        {
+            Id = antennaId,
+            Name = "Antena 1",
+            Number = 1,
+            Status = "Off",
+            Sensibility = -70,
+            Power = 30.5
+        };
+        systemService.UpdateAntennaAsync(antennaId, updateDto).Returns(expected);
+        var controller = new SystemController(settingsService);
+
+        var result = await controller.UpdateAntenna(antennaId, updateDto, systemService);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var antenna = Assert.IsType<AntennaDto>(ok.Value);
+        Assert.Equal("Off", antenna.Status);
+        Assert.Equal(30.5, antenna.Power);
+        await systemService.Received(1).UpdateAntennaAsync(antennaId, updateDto);
+    }
+
+    [Fact]
+    public async Task UpdateAntenna_WhenNotFound_ReturnsNotFound()
+    {
+        var settingsService = Substitute.For<ISettingsService>();
+        var systemService = Substitute.For<ISystemService>();
+        var antennaId = Guid.NewGuid();
+        var updateDto = new UpdateAntennaDto { Status = "On" };
+        systemService.UpdateAntennaAsync(antennaId, updateDto)
+            .ThrowsAsync(new KeyNotFoundException());
+        var controller = new SystemController(settingsService);
+
+        var result = await controller.UpdateAntenna(antennaId, updateDto, systemService);
+
+        Assert.IsType<NotFoundResult>(result.Result);
+    }
 }

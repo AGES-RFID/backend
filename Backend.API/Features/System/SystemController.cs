@@ -68,4 +68,25 @@ public class SystemController(ISettingsService settingsService) : ControllerBase
             return Problem();
         }
     }
+
+    [HttpPut("antennas/{antennaId:guid}")]
+    public async Task<ActionResult<AntennaDto>> UpdateAntenna(
+        Guid antennaId,
+        UpdateAntennaDto dto,
+        [FromServices] ISystemService systemService)
+    {
+        try
+        {
+            var antenna = await systemService.UpdateAntennaAsync(antennaId, dto);
+            return Ok(antenna);
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (Exception)
+        {
+            return Problem();
+        }
+    }
 }

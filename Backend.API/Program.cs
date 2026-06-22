@@ -106,6 +106,7 @@ builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IAccessesService, AccessesService>();
 builder.Services.AddScoped<IParkingPricesService, ParkingPricesService>();
+builder.Services.AddScoped<IGatewayStatusService, GatewayStatusService>();
 builder.Services.AddScoped<ISettingsService, SettingsService>();
 builder.Services.AddScoped<ISystemService, SystemService>();
 builder.Services.AddScoped<IAppSeeder, AppSeeder>();
