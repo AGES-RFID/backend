@@ -52,4 +52,18 @@ public class DashboardController(IDashboardService dashboardService) : Controlle
             return Problem();
         }
     }
+
+    [HttpGet("permanence")]
+    public async Task<ActionResult<IEnumerable<PermanenceDto>>> GetPermanence()
+    {
+        try
+        {
+            var permanence = await _dashboardService.GetPermanenceAsync();
+            return Ok(permanence);
+        }
+        catch (Exception)
+        {
+            return Problem();
+        }
+    }
 }

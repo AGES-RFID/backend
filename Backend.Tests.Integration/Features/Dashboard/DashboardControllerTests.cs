@@ -407,4 +407,161 @@ public class DashboardControllerTests(CustomWebApplicationFactory factory)
         Assert.True(metrics.UpdatedAt > DateTime.MinValue);
         Assert.NotEmpty(metrics.Accesses);
     }
+
+    [Fact]
+    public async Task GetPermanence_WhenNoVehiclesInside_ReturnsEmptyList()
+    {
+        var adminClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Admin);
+        var response = await adminClient.GetAsync("/api/dashboard/permanence");
+
+        response.EnsureSuccessStatusCode();
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var body = await response.Content.ReadFromJsonAsync<PermanenceDto[]>(
+            CustomWebApplicationFactory.JsonOptions);
+
+        Assert.NotNull(body);
+        Assert.Empty(body);
+    }
+
+    [Fact]
+    public async Task GetPermanence_WhenOneVehicleEntered_ReturnsCorrectPermanence()
+    {
+        var adminClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Admin);
+        var baseTime = DateTime.UtcNow;
+        var (_, _, tag) = await SeedVehicleWithTagAsync("ENTR001");
+        await SeedAccessAsync(tag.TagId, AccessType.Entry, baseTime.AddMinutes(-90));
+
+        var response = await adminClient.GetAsync("/api/dashboard/permanence");
+
+        response.EnsureSuccessStatusCode();
+        var body = await response.Content.ReadFromJsonAsync<PermanenceDto[]>(
+            CustomWebApplicationFactory.JsonOptions);
+
+        Assert.NotNull(body);
+        var permanence = Assert.Single(body);
+        Assert.Equal("ENTR001", permanence.Plate);
+        Assert.InRange(permanence.MinutesParked, 89, 91);
+    }
+
+    [Fact]
+    public async Task GetPermanence_WhenVehicleExited_NotIncluded()
+    {
+        var adminClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Admin);
+        var baseTime = DateTime.UtcNow;
+        var (_, _, tag) = await SeedVehicleWithTagAsync("EXIT001");
+        await SeedAccessAsync(tag.TagId, AccessType.Entry, baseTime.AddMinutes(-10));
+        await SeedAccessAsync(tag.TagId, AccessType.Exit, baseTime);
+
+        var response = await adminClient.GetAsync("/api/dashboard/permanence");
+
+        response.EnsureSuccessStatusCode();
+        var body = await response.Content.ReadFromJsonAsync<PermanenceDto[]>(
+            CustomWebApplicationFactory.JsonOptions);
+
+        Assert.NotNull(body);
+        Assert.Empty(body);
+    }
+
+    [Fact]
+    public async Task GetPermanence_OnlyCountsVehiclesWhoseLastAccessIsEntry()
+    {
+        var adminClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Admin);
+        var baseTime = DateTime.UtcNow;
+
+        // Only Entry
+        var (_, _, tagA) = await SeedVehicleWithTagAsync("CAR-A");
+        await SeedAccessAsync(tagA.TagId, AccessType.Entry, baseTime.AddMinutes(-30));
+
+        // Entry then Exit
+        var (_, _, tagB) = await SeedVehicleWithTagAsync("CAR-B");
+        await SeedAccessAsync(tagB.TagId, AccessType.Entry, baseTime.AddMinutes(-20));
+        await SeedAccessAsync(tagB.TagId, AccessType.Exit, baseTime.AddMinutes(-5));
+
+        // Entry, Exit, then Entry again
+        var (_, _, tagC) = await SeedVehicleWithTagAsync("CAR-C");
+        await SeedAccessAsync(tagC.TagId, AccessType.Entry, baseTime.AddMinutes(-60));
+        await SeedAccessAsync(tagC.TagId, AccessType.Exit, baseTime.AddMinutes(-40));
+        await SeedAccessAsync(tagC.TagId, AccessType.Entry, baseTime.AddMinutes(-2));
+
+        var response = await adminClient.GetAsync("/api/dashboard/permanence");
+
+        response.EnsureSuccessStatusCode();
+        var body = await response.Content.ReadFromJsonAsync<PermanenceDto[]>(
+            CustomWebApplicationFactory.JsonOptions);
+
+        Assert.NotNull(body);
+        Assert.Equal(2, body.Length);
+
+        var plates = body.Select(v => v.Plate).ToHashSet();
+        Assert.Contains("CAR-A", plates);
+        Assert.Contains("CAR-C", plates);
+        Assert.DoesNotContain("CAR-B", plates);
+    }
+
+    [Fact]
+    public async Task GetPermanence_ReturnsOkStatusCode()
+    {
+        var adminClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Admin);
+        var response = await adminClient.GetAsync("/api/dashboard/permanence");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetPermanence_WhenNotAuthenticated_ReturnsUnauthorized()
+    {
+        var anonymousClient = AuthTestHelper.CreateAnonymousClient(factory);
+        var response = await anonymousClient.GetAsync("/api/dashboard/permanence");
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetPermanence_WhenCustomerAuthenticated_ReturnsForbidden()
+    {
+        var customerClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Customer);
+        var response = await customerClient.GetAsync("/api/dashboard/permanence");
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetPermanence_ReturnsEpcAsRfidTag()
+    {
+        var adminClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Admin);
+        var baseTime = DateTime.UtcNow;
+        var (_, _, tag) = await SeedVehicleWithTagAsync("EPC-001");
+        await SeedAccessAsync(tag.TagId, AccessType.Entry, baseTime.AddMinutes(-30));
+
+        var response = await adminClient.GetAsync("/api/dashboard/permanence");
+
+        response.EnsureSuccessStatusCode();
+        var body = await response.Content.ReadFromJsonAsync<PermanenceDto[]>(
+            CustomWebApplicationFactory.JsonOptions);
+
+        Assert.NotNull(body);
+        var permanence = Assert.Single(body);
+        Assert.Equal(tag.Epc, permanence.RfidTag);
+        Assert.Equal("EPC-001", permanence.Plate);
+    }
+
+    [Fact]
+    public async Task GetPermanence_WhenMultipleEntries_UsesMostRecentEntry()
+    {
+        var adminClient = await AuthTestHelper.CreateClientAsAsync(factory, UserRole.Admin);
+        var baseTime = DateTime.UtcNow;
+        var (_, _, tag) = await SeedVehicleWithTagAsync("MULTI-01");
+        await SeedAccessAsync(tag.TagId, AccessType.Entry, baseTime.AddMinutes(-120));
+        await SeedAccessAsync(tag.TagId, AccessType.Exit, baseTime.AddMinutes(-60));
+        await SeedAccessAsync(tag.TagId, AccessType.Entry, baseTime.AddMinutes(-10));
+
+        var response = await adminClient.GetAsync("/api/dashboard/permanence");
+
+        response.EnsureSuccessStatusCode();
+        var body = await response.Content.ReadFromJsonAsync<PermanenceDto[]>(
+            CustomWebApplicationFactory.JsonOptions);
+
+        Assert.NotNull(body);
+        var permanence = Assert.Single(body);
+        // 10 minutes since the most recent entry
+        Assert.InRange(permanence.MinutesParked, 9, 11);
+    }
 }
