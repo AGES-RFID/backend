@@ -34,6 +34,28 @@ public class TagController(ITagService tagService) : ControllerBase
         }
     }
 
+    [HttpPost("bulk")]
+    [Consumes("multipart/form-data")]
+    public async Task<ActionResult<BulkCreateTagsResultDto>> CreateTagsFromCsv([FromForm] IFormFile file)
+    {
+        if (file is null)
+            return BadRequest("CSV file is required");
+
+        try
+        {
+            var result = await _tagService.CreateTagsFromCsvAsync(file);
+            return Ok(result);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (Exception)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred while importing tags");
+        }
+    }
+
     [HttpGet]
     public async Task<ActionResult<IEnumerable<TagListDto>>> GetAllTags([FromQuery] string? status)
     {

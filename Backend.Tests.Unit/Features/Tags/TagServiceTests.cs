@@ -4,6 +4,7 @@ using Backend.Features.Tags.Enums;
 using Backend.Features.Users;
 using Backend.Features.Vehicles;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Http;
 
 namespace Backend.Tests.Unit.Features.Tags;
 
@@ -30,6 +31,35 @@ public class TagServiceTests
         Assert.Equal(result.TagId, reloadedVehicle.TagId);
     }
 
+    [Fact]
+    public async Task CreateTagsFromCsvAsync_WhenCsvHasHeader_CreatesTags()
+    {
+        await using var db = CreateDbContext();
+        var service = new TagService(db);
+        var file = CreateCsvFile("tid,epc\nTID-001,EPC-001\nTID-002,EPC-002");
+
+        var result = await service.CreateTagsFromCsvAsync(file);
+
+        Assert.Equal(2, result.CreatedCount);
+        Assert.Empty(result.Errors);
+        Assert.Equal(2, await db.Tags.CountAsync());
+    }
+
+    [Fact]
+    public async Task CreateTagsFromCsvAsync_WhenLineIsDuplicate_ReturnsErrorAndKeepsValidRows()
+    {
+        await using var db = CreateDbContext();
+        var service = new TagService(db);
+        await service.CreateTagAsync(new CreateTagDto { Tid = "TID-001", Epc = "EPC-001" });
+        var file = CreateCsvFile("tid,epc\nTID-001,EPC-999\nTID-002,EPC-002");
+
+        var result = await service.CreateTagsFromCsvAsync(file);
+
+        Assert.Equal(1, result.CreatedCount);
+        Assert.Single(result.Errors);
+        Assert.Equal(2, await db.Tags.CountAsync());
+    }
+
     private static AppDbContext CreateDbContext()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
@@ -37,6 +67,17 @@ public class TagServiceTests
             .Options;
 
         return new AppDbContext(options);
+    }
+
+    private static IFormFile CreateCsvFile(string content)
+    {
+        var bytes = System.Text.Encoding.UTF8.GetBytes(content);
+        var stream = new MemoryStream(bytes);
+        return new FormFile(stream, 0, bytes.Length, "file", "tags.csv")
+        {
+            Headers = new HeaderDictionary(),
+            ContentType = "text/csv"
+        };
     }
 
     private static async Task<User> SeedUserAsync(AppDbContext db)

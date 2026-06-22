@@ -1,4 +1,5 @@
 using Backend.Features.Tags;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using NSubstitute;
 
@@ -70,6 +71,35 @@ public class TagControllerTests
 
         var error = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(500, error.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateTagsFromCsv_WhenServiceReturnsResult_ReturnsOk()
+    {
+        var tagService = Substitute.For<ITagService>();
+        var file = CreateCsvFile("tid,epc\nTID-001,EPC-001");
+        var expected = new BulkCreateTagsResultDto { CreatedCount = 1 };
+        tagService.CreateTagsFromCsvAsync(file).Returns(expected);
+        var controller = new TagController(tagService);
+
+        var result = await controller.CreateTagsFromCsv(file);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var dto = Assert.IsType<BulkCreateTagsResultDto>(ok.Value);
+        Assert.Equal(1, dto.CreatedCount);
+        await tagService.Received(1).CreateTagsFromCsvAsync(file);
+    }
+
+    [Fact]
+    public async Task CreateTagsFromCsv_WhenFileIsMissing_ReturnsBadRequest()
+    {
+        var tagService = Substitute.For<ITagService>();
+        var controller = new TagController(tagService);
+
+        var result = await controller.CreateTagsFromCsv(null!);
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+        await tagService.DidNotReceiveWithAnyArgs().CreateTagsFromCsvAsync(default!);
     }
 
     [Fact]
@@ -323,5 +353,16 @@ public class TagControllerTests
 
         var error = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(500, error.StatusCode);
+    }
+
+    private static IFormFile CreateCsvFile(string content)
+    {
+        var bytes = System.Text.Encoding.UTF8.GetBytes(content);
+        var stream = new MemoryStream(bytes);
+        return new FormFile(stream, 0, bytes.Length, "file", "tags.csv")
+        {
+            Headers = new HeaderDictionary(),
+            ContentType = "text/csv"
+        };
     }
 }
