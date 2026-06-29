@@ -8,7 +8,25 @@ namespace Backend.Tests.Unit.Features.Users;
 public class UsersControllerTests
 {
     private static UsersController CreateController(IUserService userService)
-        => new(userService);
+        => CreateController(userService, CreateCurrentUserContext(true, true, Guid.NewGuid()));
+
+    private static UsersController CreateController(IUserService userService, ICurrentUserContext currentUserContext)
+        => new(userService, currentUserContext);
+
+    private static ICurrentUserContext CreateCurrentUserContext(bool isAuthenticated, bool isAdmin, Guid? userId = null)
+    {
+        var currentUserContext = Substitute.For<ICurrentUserContext>();
+        currentUserContext.IsAuthenticated.Returns(isAuthenticated);
+        currentUserContext.IsAdmin.Returns(isAdmin);
+        currentUserContext.Role.Returns(isAdmin ? UserRole.Admin : UserRole.Customer);
+        currentUserContext.UserId.Returns(userId);
+        if (userId.HasValue)
+        {
+            currentUserContext.GetRequiredUserId().Returns(userId.Value);
+        }
+
+        return currentUserContext;
+    }
 
     [Fact]
     public async Task GetUser_WhenServiceThrowsKeyNotFoundException_ReturnsNotFound()
@@ -79,6 +97,39 @@ public class UsersControllerTests
     }
 
     [Fact]
+    public async Task UpdateUser_WhenCustomerUpdatesAnotherUser_ReturnsForbid()
+    {
+        var currentUserContext = CreateCurrentUserContext(true, false, Guid.NewGuid());
+        var userService = Substitute.For<IUserService>();
+
+        var controller = CreateController(userService, currentUserContext);
+        var result = await controller.UpdateUser(Guid.NewGuid(), new UpdateUserDto { Name = "Blocked" });
+
+        Assert.IsType<ForbidResult>(result);
+        await userService.DidNotReceiveWithAnyArgs().UpdateUserAsync(default, default!);
+    }
+
+    [Fact]
+    public async Task UpdateUser_WhenCustomerUpdatesSelf_RemovesRoleEscalation()
+    {
+        var userId = Guid.NewGuid();
+        var dto = new UpdateUserDto { Name = "Self", Role = UserRole.Admin };
+        UpdateUserDto? capturedDto = null;
+
+        var currentUserContext = CreateCurrentUserContext(true, false, userId);
+        var userService = Substitute.For<IUserService>();
+        userService.UpdateUserAsync(userId, Arg.Do<UpdateUserDto>(x => capturedDto = x))
+            .Returns(new UserDto { UserId = userId, Name = dto.Name, Email = "self@example.com", Role = UserRole.Customer });
+
+        var controller = CreateController(userService, currentUserContext);
+        var result = await controller.UpdateUser(userId, dto);
+
+        Assert.IsType<OkObjectResult>(result);
+        Assert.NotNull(capturedDto);
+        Assert.Null(capturedDto.Role);
+    }
+
+    [Fact]
     public async Task GetAllUsers_WhenServiceReturnsUsers_ReturnsOkWithList()
     {
         var userService = Substitute.For<IUserService>();
@@ -109,6 +160,42 @@ public class UsersControllerTests
         var result = await controller.CreateUser(dto);
 
         Assert.IsType<CreatedAtActionResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task CreateUser_WhenAnonymous_ForcesCustomerRole()
+    {
+        var dto = new CreateUserDto { Name = "Alice", Email = "alice@example.com", Password = "password123", Role = UserRole.Admin };
+        CreateUserDto? capturedDto = null;
+
+        var currentUserContext = CreateCurrentUserContext(false, false);
+        var userService = Substitute.For<IUserService>();
+        userService.CreateUserAsync(Arg.Do<CreateUserDto>(x => capturedDto = x))
+            .Returns(call =>
+            {
+                var createDto = call.Arg<CreateUserDto>();
+                return new UserDto { UserId = Guid.NewGuid(), Name = createDto.Name, Email = createDto.Email, Role = createDto.Role };
+            });
+
+        var controller = CreateController(userService, currentUserContext);
+        var result = await controller.CreateUser(dto);
+
+        Assert.IsType<CreatedAtActionResult>(result.Result);
+        Assert.NotNull(capturedDto);
+        Assert.Equal(UserRole.Customer, capturedDto.Role);
+    }
+
+    [Fact]
+    public async Task CreateUser_WhenCustomerAuthenticated_ReturnsForbid()
+    {
+        var currentUserContext = CreateCurrentUserContext(true, false, Guid.NewGuid());
+        var userService = Substitute.For<IUserService>();
+
+        var controller = CreateController(userService, currentUserContext);
+        var result = await controller.CreateUser(new CreateUserDto { Name = "Blocked", Email = "blocked@example.com", Password = "password123", Role = UserRole.Customer });
+
+        Assert.IsType<ForbidResult>(result.Result);
+        await userService.DidNotReceiveWithAnyArgs().CreateUserAsync(default!);
     }
 
     [Fact]
