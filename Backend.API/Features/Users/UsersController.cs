@@ -11,16 +11,16 @@ public class UsersController(IUserService userService, ICurrentUserContext curre
     private readonly IUserService _userService = userService;
     private readonly ICurrentUserContext _currentUserContext = currentUserContext;
 
-    [HttpGet]
     [Authorize(Roles = "Admin")]
+    [HttpGet]
     public async Task<ActionResult<IEnumerable<UserWithVehiclesDto>>> GetAllUsers()
     {
         var users = await _userService.GetAllUsersAsync();
         return Ok(users);
     }
 
-    [HttpGet("by-name/{name}")]
     [Authorize(Roles = "Admin")]
+    [HttpGet("by-name/{name}")]
     public async Task<ActionResult<UserWithVehiclesDto>> GetUserByName(string name)
     {
         try
@@ -34,8 +34,8 @@ public class UsersController(IUserService userService, ICurrentUserContext curre
         }
     }
 
-    [HttpGet("{userId}")]
     [Authorize(Roles = "Admin")]
+    [HttpGet("{userId}")]
     public async Task<ActionResult<UserWithVehiclesDto>> GetUser(Guid userId)
     {
         try
@@ -49,30 +49,23 @@ public class UsersController(IUserService userService, ICurrentUserContext curre
         }
     }
 
-    [HttpPost]
     [AllowAnonymous]
+    [HttpPost]
     public async Task<ActionResult<UserDto>> CreateUser(CreateUserDto dto)
     {
+        if (_currentUserContext.IsAuthenticated && !_currentUserContext.IsAdmin)
+        {
+            return Forbid();
+        }
+
+        if (!_currentUserContext.IsAuthenticated)
+        {
+            dto.Role = UserRole.Customer;
+        }
+
         try
         {
-            if (_currentUserContext.IsAuthenticated && !_currentUserContext.IsAdmin)
-                return Forbid();
-
-            var createDto = dto;
-            if (!_currentUserContext.IsAuthenticated)
-            {
-                createDto = new CreateUserDto
-                {
-                    Name = dto.Name,
-                    Email = dto.Email,
-                    Password = dto.Password,
-                    Cpf = dto.Cpf,
-                    Cellphone = dto.Cellphone,
-                    Role = UserRole.Customer
-                };
-            }
-
-            var user = await _userService.CreateUserAsync(createDto);
+            var user = await _userService.CreateUserAsync(dto);
             return CreatedAtAction(nameof(GetUser), new { userId = user.UserId }, user);
         }
         catch (EmailAlreadyExistsException)
@@ -88,21 +81,22 @@ public class UsersController(IUserService userService, ICurrentUserContext curre
     // Atenção aos verbos HTTP!   https://medium.com/@gabrielrufino.js/put-vs-patch-pare-de-agora-escolher-errado-533b8c6058d9
     // PUT -> Atualiza TODOS os campos da entidade
     // PATCH -> Atualização partical da entidade (ex: apenas o nome ou email)
-    [HttpPatch("{userId}")]
     [Authorize]
+    [HttpPatch("{userId}")]
     public async Task<IActionResult> UpdateUser(Guid userId, UpdateUserDto dto)
     {
+        if (!_currentUserContext.IsAdmin)
+        {
+            if (_currentUserContext.GetRequiredUserId() != userId)
+            {
+                return Forbid();
+            }
+
+            dto.Role = null;
+        }
+
         try
         {
-            var actorUserId = _currentUserContext.GetRequiredUserId();
-            var actorRole = _currentUserContext.GetRequiredRole();
-
-            if (actorRole != UserRole.Admin && actorUserId != userId)
-                return Forbid();
-
-            if (actorRole != UserRole.Admin)
-                dto.Role = null;
-
             var updateUser = await _userService.UpdateUserAsync(userId, dto);
             return Ok(updateUser);
         }
@@ -117,8 +111,8 @@ public class UsersController(IUserService userService, ICurrentUserContext curre
         }
     }
 
-    [HttpDelete("{userId}")]
     [Authorize(Roles = "Admin")]
+    [HttpDelete("{userId}")]
     public async Task<IActionResult> DeleteUser(Guid userId)
     {
         try

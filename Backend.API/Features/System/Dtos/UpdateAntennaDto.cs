@@ -1,10 +1,7 @@
 namespace Backend.Features.SystemConfig;
 
-public class AntennaDto
+public class UpdateAntennaDto
 {
-    public Guid Id { get; set; }
-    public string Name { get; set; } = string.Empty;
-    public int Number { get; set; }
     public string Status { get; set; } = string.Empty;
     public double? Sensibility { get; set; }
     public double? Power { get; set; }

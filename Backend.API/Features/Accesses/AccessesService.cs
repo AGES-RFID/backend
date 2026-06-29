@@ -56,12 +56,18 @@ public class AccessesService(AppDbContext db) : IAccessesService
         if (dto.Entrance)
         {
             if (lastAccess != null && lastAccess.Type == AccessType.Entry)
-                throw new InvalidOperationException("Não é possível registrar a entrada: o veículo já está no estacionamento.");
+                throw new AccessRegistrationConflictException(
+                    "tag_already_inside",
+                    "Access registration failed because this tag is already inside the parking lot.",
+                    "The tag is already inside the parking lot. Entry was not registered.");
         }
         else
         {
             if (lastAccess == null || lastAccess.Type == AccessType.Exit)
-                throw new InvalidOperationException("Não é possível registrar a saída: o veículo não está no estacionamento.");
+                throw new AccessRegistrationConflictException(
+                    "tag_already_outside",
+                    "Access registration failed because this tag is already outside the parking lot.",
+                    "The tag is already outside the parking lot. Exit was not registered.");
         }
 
         var access = new Access

@@ -1,5 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Security.Claims;
+using System.Text;
+using System.Text.Json;
 using Backend.Database;
 using Backend.Features.Accesses;
 using Backend.Features.Tags;
@@ -118,6 +121,12 @@ public class AccessesControllerTests(CustomWebApplicationFactory factory) : ICla
         var response = await _client.PostAsync("/api/accesses", JsonContent.Create(payload, options: CustomWebApplicationFactory.JsonOptions));
 
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>(CustomWebApplicationFactory.JsonOptions);
+        Assert.False(body.GetProperty("success").GetBoolean());
+        Assert.Equal("tag_already_inside", body.GetProperty("reason").GetString());
+        Assert.Equal(
+            "The tag is already inside the parking lot. Entry was not registered.",
+            body.GetProperty("warning").GetString());
     }
 
     [Fact]
@@ -145,6 +154,12 @@ public class AccessesControllerTests(CustomWebApplicationFactory factory) : ICla
         var response = await _client.PostAsync("/api/accesses", JsonContent.Create(payload, options: CustomWebApplicationFactory.JsonOptions));
 
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>(CustomWebApplicationFactory.JsonOptions);
+        Assert.False(body.GetProperty("success").GetBoolean());
+        Assert.Equal("tag_already_outside", body.GetProperty("reason").GetString());
+        Assert.Equal(
+            "The tag is already outside the parking lot. Exit was not registered.",
+            body.GetProperty("warning").GetString());
     }
 
     [Fact]

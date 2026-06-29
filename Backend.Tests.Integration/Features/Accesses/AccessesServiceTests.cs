@@ -49,7 +49,7 @@ public class AccessesServiceTests
     }
 
     [Fact]
-    public async Task RegisterAccessAsync_Entry_WhenAlreadyInside_ThrowsInvalidOperationException()
+    public async Task RegisterAccessAsync_Entry_WhenAlreadyInside_ThrowsAccessRegistrationConflictException()
     {
         var db = CreateInMemoryDb();
         var sut = new AccessesService(db);
@@ -60,11 +60,12 @@ public class AccessesServiceTests
 
         var dto = new CreateAccessDto { Tid = tag.Tid, Epc = tag.Epc, Entrance = true };
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => sut.RegisterAccessAsync(dto));
+        var exception = await Assert.ThrowsAsync<AccessRegistrationConflictException>(() => sut.RegisterAccessAsync(dto));
+        Assert.Equal("tag_already_inside", exception.Reason);
     }
 
     [Fact]
-    public async Task RegisterAccessAsync_Exit_WhenOutside_ThrowsInvalidOperationException()
+    public async Task RegisterAccessAsync_Exit_WhenOutside_ThrowsAccessRegistrationConflictException()
     {
         var db = CreateInMemoryDb();
         var sut = new AccessesService(db);
@@ -72,7 +73,8 @@ public class AccessesServiceTests
 
         var dto = new CreateAccessDto { Tid = tag.Tid, Epc = tag.Epc, Entrance = false };
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => sut.RegisterAccessAsync(dto));
+        var exception = await Assert.ThrowsAsync<AccessRegistrationConflictException>(() => sut.RegisterAccessAsync(dto));
+        Assert.Equal("tag_already_outside", exception.Reason);
     }
 
     [Fact]

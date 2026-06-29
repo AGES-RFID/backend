@@ -38,17 +38,32 @@ public class AccessesController(IAccessesService accessService) : ControllerBase
         }
         catch (KeyNotFoundException ex)
         {
-            return NotFound(new { error = ex.Message });
+            return NotFound(Failure("tag_not_found", ex.Message));
+        }
+        catch (AccessRegistrationConflictException ex)
+        {
+            return Conflict(Failure(ex.Reason, ex.Message, ex.Warning));
         }
         catch (InvalidOperationException ex)
         {
-            return Conflict(new { error = ex.Message });
+            return Conflict(Failure("access_registration_failed", ex.Message));
         }
         catch (Exception)
         {
-            return StatusCode(StatusCodes.Status500InternalServerError, new { error = "Ocorreu um erro interno no servidor." });
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                Failure("internal_error", "Access registration failed because an internal server error occurred."));
         }
     }
+
+    private static AccessFailureResponseDto Failure(string reason, string message, string? warning = null) =>
+        new()
+        {
+            Success = false,
+            Reason = reason,
+            Message = message,
+            Warning = warning
+        };
 
     private static bool TryParseAccessType(string? accessType, out AccessType? parsedType)
     {

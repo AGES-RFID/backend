@@ -5,6 +5,7 @@ using Backend.Features.Users;
 using Backend.Features.Vehicles;
 using Backend.Features.Accesses;
 using Backend.Features.ParkingPrices;
+using Backend.Features.GatewayStatus;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Backend.Features.Settings;
@@ -22,6 +23,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Access> Accesses { get; set; }
     public DbSet<Transaction> Transactions { get; set; }
     public DbSet<ParkingPrice> ParkingPrices { get; set; }
+    public DbSet<ReaderStatus> ReaderStatuses { get; set; }
     public DbSet<Settings> Settings { get; set; }
 
     public override int SaveChanges()

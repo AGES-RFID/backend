@@ -39,7 +39,11 @@ public class AccessesControllerTests
 
         var result = await controller.RegisterAccess(dto);
 
-        Assert.IsType<NotFoundObjectResult>(result.Result);
+        var notFound = Assert.IsType<NotFoundObjectResult>(result.Result);
+        var response = Assert.IsType<AccessFailureResponseDto>(notFound.Value);
+        Assert.False(response.Success);
+        Assert.Equal("tag_not_found", response.Reason);
+        Assert.Equal("Tag not found", response.Message);
     }
 
     [Fact]
@@ -53,7 +57,11 @@ public class AccessesControllerTests
 
         var result = await controller.RegisterAccess(dto);
 
-        Assert.IsType<ConflictObjectResult>(result.Result);
+        var conflict = Assert.IsType<ConflictObjectResult>(result.Result);
+        var response = Assert.IsType<AccessFailureResponseDto>(conflict.Value);
+        Assert.False(response.Success);
+        Assert.Equal("access_registration_failed", response.Reason);
+        Assert.Equal("Tag inactive", response.Message);
     }
 
     [Fact]
@@ -61,13 +69,41 @@ public class AccessesControllerTests
     {
         var dto = MakeDto(entrance: false);
         var service = Substitute.For<IAccessesService>();
-        service.RegisterAccessAsync(dto).ThrowsAsync(new InvalidOperationException("Already outside"));
+        service.RegisterAccessAsync(dto).ThrowsAsync(new AccessRegistrationConflictException(
+            "tag_already_outside",
+            "Access registration failed because this tag is already outside the parking lot.",
+            "The tag is already outside the parking lot. Exit was not registered."));
 
         var controller = new AccessesController(service);
 
         var result = await controller.RegisterAccess(dto);
 
-        Assert.IsType<ConflictObjectResult>(result.Result);
+        var conflict = Assert.IsType<ConflictObjectResult>(result.Result);
+        var response = Assert.IsType<AccessFailureResponseDto>(conflict.Value);
+        Assert.False(response.Success);
+        Assert.Equal("tag_already_outside", response.Reason);
+        Assert.Equal("The tag is already outside the parking lot. Exit was not registered.", response.Warning);
+    }
+
+    [Fact]
+    public async Task RegisterAccess_Entry_WhenAlreadyInside_ReturnsConflictWithWarning()
+    {
+        var dto = MakeDto(entrance: true);
+        var service = Substitute.For<IAccessesService>();
+        service.RegisterAccessAsync(dto).ThrowsAsync(new AccessRegistrationConflictException(
+            "tag_already_inside",
+            "Access registration failed because this tag is already inside the parking lot.",
+            "The tag is already inside the parking lot. Entry was not registered."));
+
+        var controller = new AccessesController(service);
+
+        var result = await controller.RegisterAccess(dto);
+
+        var conflict = Assert.IsType<ConflictObjectResult>(result.Result);
+        var response = Assert.IsType<AccessFailureResponseDto>(conflict.Value);
+        Assert.False(response.Success);
+        Assert.Equal("tag_already_inside", response.Reason);
+        Assert.Equal("The tag is already inside the parking lot. Entry was not registered.", response.Warning);
     }
 
     [Fact]

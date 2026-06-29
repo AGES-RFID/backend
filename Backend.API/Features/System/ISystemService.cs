@@ -7,4 +7,5 @@ public interface ISystemService
 {
     Task<SystemDto> GetSystemAsync();
     Task<List<AntennaDto>> GetAntennasAsync();
+    Task<AntennaDto> UpdateAntennaAsync(Guid antennaId, UpdateAntennaDto dto);
 }
