@@ -8,7 +8,7 @@ namespace Backend.Tests.Unit.Features.Users;
 public class UsersControllerTests
 {
     private static UsersController CreateController(IUserService userService)
-        => new(userService, Substitute.For<ICurrentUserContext>());
+        => new(userService);
 
     [Fact]
     public async Task GetUser_WhenServiceThrowsKeyNotFoundException_ReturnsNotFound()
