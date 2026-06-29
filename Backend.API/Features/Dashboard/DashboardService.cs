@@ -11,6 +11,7 @@ public interface IDashboardService
     Task<OccupancyDto> GetOccupancyAsync();
     Task<DashboardMetricsDto> GetMetricsAsync();
     Task<DashboardMetricsDto> GetDashboardAsync();
+    Task<IEnumerable<PermanenceDto>> GetPermanenceAsync();
 }
 
 public class DashboardService(AppDbContext db, ISettingsService settingsService) : IDashboardService
@@ -99,5 +100,32 @@ public class DashboardService(AppDbContext db, ISettingsService settingsService)
         metrics.UpdatedAt = now;
 
         return metrics;
+    }
+
+    public async Task<IEnumerable<PermanenceDto>> GetPermanenceAsync()
+    {
+        var now = DateTime.UtcNow;
+
+        var permanence = await _db.Vehicles
+            .AsNoTracking()
+            .Include(v => v.Tag)
+            .Where(v => v.TagId != null && _db.Accesses
+                .Where(a => a.TagId == v.TagId)
+                .OrderByDescending(a => a.Timestamp)
+                .Select(a => a.Type)
+                .FirstOrDefault() == AccessType.Entry)
+            .Select(v => new PermanenceDto
+            {
+                RfidTag = v.Tag!.Epc,
+                Plate = v.Plate,
+                MinutesParked = (int)(now - _db.Accesses
+                    .Where(a => a.TagId == v.TagId && a.Type == AccessType.Entry)
+                    .OrderByDescending(a => a.Timestamp)
+                    .Select(a => a.Timestamp)
+                    .First()).TotalMinutes
+            })
+            .ToListAsync();
+
+        return permanence;
     }
 }

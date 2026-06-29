@@ -278,4 +278,262 @@ public class DashboardServiceTests
         Assert.NotNull(result.Accesses);
         Assert.NotEmpty(result.Accesses);
     }
+
+    [Fact]
+    public async Task GetPermanenceAsync_WhenNoVehiclesInside_ReturnsEmptyList()
+    {
+        var db = CreateInMemoryDb();
+        var service = CreateService(db);
+
+        var result = await service.GetPermanenceAsync();
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetPermanenceAsync_WhenVehicleInside_ReturnsCorrectPermanence()
+    {
+        var db = CreateInMemoryDb();
+        var now = DateTime.UtcNow;
+
+        var tagId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+
+        db.Users.Add(new User
+        {
+            UserId = userId,
+            Name = "Test",
+            Email = $"{userId}@test.com",
+            PasswordHash = "hash",
+            Role = UserRole.Customer
+        });
+        db.Tags.Add(new Tag { TagId = tagId, Epc = "EPC-TEST-001", Tid = "TID-TEST-001" });
+        db.Vehicles.Add(new Vehicle
+        {
+            UserId = userId,
+            TagId = tagId,
+            Plate = "ABC-1234",
+            Brand = "Honda",
+            Model = "Civic"
+        });
+        await db.SaveChangesAsync();
+
+        var trackedTag = await db.Tags.FindAsync(tagId)
+            ?? throw new InvalidOperationException();
+
+        db.Accesses.Add(new Access
+        {
+            TagId = tagId,
+            Type = AccessType.Entry,
+            Timestamp = now.AddMinutes(-120),
+            Tag = trackedTag
+        });
+        await db.SaveChangesAsync();
+
+        var service = CreateService(db);
+        var result = await service.GetPermanenceAsync();
+
+        var permanence = Assert.Single(result);
+        Assert.Equal("EPC-TEST-001", permanence.RfidTag);
+        Assert.Equal("ABC-1234", permanence.Plate);
+        Assert.InRange(permanence.MinutesParked, 119, 121);
+    }
+
+    [Fact]
+    public async Task GetPermanenceAsync_WhenVehicleExited_NotIncluded()
+    {
+        var db = CreateInMemoryDb();
+        var now = DateTime.UtcNow;
+
+        var tagId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+
+        db.Users.Add(new User
+        {
+            UserId = userId,
+            Name = "Test",
+            Email = $"{userId}@test.com",
+            PasswordHash = "hash",
+            Role = UserRole.Customer
+        });
+        db.Tags.Add(new Tag { TagId = tagId, Epc = "EPC-EXIT-001", Tid = "TID-EXIT-001" });
+        db.Vehicles.Add(new Vehicle
+        {
+            UserId = userId,
+            TagId = tagId,
+            Plate = "XYZ-5678",
+            Brand = "Toyota",
+            Model = "Corolla"
+        });
+        await db.SaveChangesAsync();
+
+        var trackedTag = await db.Tags.FindAsync(tagId)
+            ?? throw new InvalidOperationException();
+
+        db.Accesses.Add(new Access
+        {
+            TagId = tagId,
+            Type = AccessType.Entry,
+            Timestamp = now.AddMinutes(-60),
+            Tag = trackedTag
+        });
+        db.Accesses.Add(new Access
+        {
+            TagId = tagId,
+            Type = AccessType.Exit,
+            Timestamp = now.AddMinutes(-10),
+            Tag = trackedTag
+        });
+        await db.SaveChangesAsync();
+        var service = CreateService(db);
+        var result = await service.GetPermanenceAsync();
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetPermanenceAsync_WhenVehicleReentered_UsesLastEntry()
+    {
+        var db = CreateInMemoryDb();
+        var now = DateTime.UtcNow;
+
+        var tagId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+
+        db.Users.Add(new User
+        {
+            UserId = userId,
+            Name = "Test",
+            Email = $"{userId}@test.com",
+            PasswordHash = "hash",
+            Role = UserRole.Customer
+        });
+        db.Tags.Add(new Tag { TagId = tagId, Epc = "EPC-RE-001", Tid = "TID-RE-001" });
+        db.Vehicles.Add(new Vehicle
+        {
+            UserId = userId,
+            TagId = tagId,
+            Plate = "RE-0001",
+            Brand = "Fiat",
+            Model = "Uno"
+        });
+        await db.SaveChangesAsync();
+
+        var trackedTag = await db.Tags.FindAsync(tagId)
+            ?? throw new InvalidOperationException();
+
+        db.Accesses.Add(new Access
+        {
+            TagId = tagId,
+            Type = AccessType.Entry,
+            Timestamp = now.AddMinutes(-180),
+            Tag = trackedTag
+        });
+        db.Accesses.Add(new Access
+        {
+            TagId = tagId,
+            Type = AccessType.Exit,
+            Timestamp = now.AddMinutes(-90),
+            Tag = trackedTag
+        });
+        db.Accesses.Add(new Access
+        {
+            TagId = tagId,
+            Type = AccessType.Entry,
+            Timestamp = now.AddMinutes(-45),
+            Tag = trackedTag
+        });
+        await db.SaveChangesAsync();
+
+        var service = CreateService(db);
+        var result = await service.GetPermanenceAsync();
+
+        var permanence = Assert.Single(result);
+        Assert.Equal("EPC-RE-001", permanence.RfidTag);
+        Assert.Equal("RE-0001", permanence.Plate);
+        Assert.InRange(permanence.MinutesParked, 44, 46);
+    }
+
+    [Fact]
+    public async Task GetPermanenceAsync_WhenMultipleVehiclesInside_ReturnsAll()
+    {
+        var db = CreateInMemoryDb();
+        var now = DateTime.UtcNow;
+
+        var tagA = Guid.NewGuid();
+        var tagB = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+
+        db.Users.Add(new User
+        {
+            UserId = userId,
+            Name = "Owner",
+            Email = $"{userId}@test.com",
+            PasswordHash = "hash",
+            Role = UserRole.Customer
+        });
+        db.Tags.Add(new Tag { TagId = tagA, Epc = "EPC-A", Tid = "TID-A" });
+        db.Tags.Add(new Tag { TagId = tagB, Epc = "EPC-B", Tid = "TID-B" });
+        db.Vehicles.Add(new Vehicle { UserId = userId, TagId = tagA, Plate = "CAR-A", Brand = "A", Model = "A" });
+        db.Vehicles.Add(new Vehicle { UserId = userId, TagId = tagB, Plate = "CAR-B", Brand = "B", Model = "B" });
+        await db.SaveChangesAsync();
+
+        var trackedTagA = await db.Tags.FindAsync(tagA)
+            ?? throw new InvalidOperationException();
+        var trackedTagB = await db.Tags.FindAsync(tagB)
+            ?? throw new InvalidOperationException();
+
+        db.Accesses.Add(new Access
+        {
+            TagId = tagA,
+            Type = AccessType.Entry,
+            Timestamp = now.AddMinutes(-30),
+            Tag = trackedTagA
+        });
+        db.Accesses.Add(new Access
+        {
+            TagId = tagB,
+            Type = AccessType.Entry,
+            Timestamp = now.AddMinutes(-15),
+            Tag = trackedTagB
+        });
+        await db.SaveChangesAsync();
+
+        var service = CreateService(db);
+        var result = await service.GetPermanenceAsync();
+
+        Assert.Equal(2, result.Count());
+        Assert.Contains(result, p => p.Plate == "CAR-A");
+        Assert.Contains(result, p => p.Plate == "CAR-B");
+    }
+
+    [Fact]
+    public async Task GetPermanenceAsync_VehicleWithoutTag_NotIncluded()
+    {
+        var db = CreateInMemoryDb();
+        var userId = Guid.NewGuid();
+
+        db.Users.Add(new User
+        {
+            UserId = userId,
+            Name = "Test",
+            Email = $"{userId}@test.com",
+            PasswordHash = "hash",
+            Role = UserRole.Customer
+        });
+        db.Vehicles.Add(new Vehicle
+        {
+            UserId = userId,
+            TagId = null,
+            Plate = "NO-TAG",
+            Brand = "Test",
+            Model = "Test"
+        });
+        await db.SaveChangesAsync();
+
+        var service = CreateService(db);
+        var result = await service.GetPermanenceAsync();
+
+        Assert.Empty(result);
+    }
 }
