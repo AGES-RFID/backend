@@ -78,40 +78,12 @@ public class TagService(AppDbContext db) : ITagService
         {
             lineNumber++;
 
-            if (string.IsNullOrWhiteSpace(line))
+            if (await ProcessCsvLineAsync(line, lineNumber, result))
                 continue;
 
             var columns = ParseCsvLine(line);
-            if (columns.Count < 2)
-            {
-                result.Errors.Add($"Line {lineNumber}: expected TID and EPC columns");
-                continue;
-            }
-
-            if (lineNumber == 1 && IsHeader(columns))
-            {
+            if (lineNumber == 1 && columns.Count >= 2 && IsHeader(columns))
                 hasHeader = true;
-                continue;
-            }
-
-            var tid = columns[0].Trim();
-            var epc = columns[1].Trim();
-
-            if (string.IsNullOrWhiteSpace(tid) || string.IsNullOrWhiteSpace(epc))
-            {
-                result.Errors.Add($"Line {lineNumber}: TID and EPC are required");
-                continue;
-            }
-
-            try
-            {
-                var created = await CreateTagAsync(new CreateTagDto { Tid = tid, Epc = epc });
-                result.CreatedTags.Add(created);
-            }
-            catch (TagConflictException ex)
-            {
-                result.Errors.Add($"Line {lineNumber}: {ex.Message}");
-            }
         }
 
         if (!hasHeader && result.CreatedTags.Count == 0 && result.Errors.Count == 0)
@@ -119,6 +91,43 @@ public class TagService(AppDbContext db) : ITagService
 
         result.CreatedCount = result.CreatedTags.Count;
         return result;
+    }
+
+    private async Task<bool> ProcessCsvLineAsync(string line, int lineNumber, BulkCreateTagsResultDto result)
+    {
+        if (string.IsNullOrWhiteSpace(line))
+            return true;
+
+        var columns = ParseCsvLine(line);
+        if (columns.Count < 2)
+        {
+            result.Errors.Add($"Line {lineNumber}: expected TID and EPC columns");
+            return true;
+        }
+
+        if (lineNumber == 1 && IsHeader(columns))
+            return false;
+
+        var tid = columns[0].Trim();
+        var epc = columns[1].Trim();
+
+        if (string.IsNullOrWhiteSpace(tid) || string.IsNullOrWhiteSpace(epc))
+        {
+            result.Errors.Add($"Line {lineNumber}: TID and EPC are required");
+            return true;
+        }
+
+        try
+        {
+            var created = await CreateTagAsync(new CreateTagDto { Tid = tid, Epc = epc });
+            result.CreatedTags.Add(created);
+        }
+        catch (TagConflictException ex)
+        {
+            result.Errors.Add($"Line {lineNumber}: {ex.Message}");
+        }
+
+        return true;
     }
 
     public async Task<IEnumerable<TagListDto>> GetAllTagsAsync(string? status)
